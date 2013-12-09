@@ -1,0 +1,12 @@
+name = Required for Publishing
+description = Allows forms to be filled without required fields before publishing.
+;dependencies[] = field
+core = 7.x
+;configure = admin/config/content/validation
+
+; Information added by drupal.org packaging script on 2011-03-11
+version = "7.x-dev"
+core = "7.x"
+project = "required_for_pub"
+datestamp = "1299872168"
+
