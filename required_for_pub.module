@@ -57,7 +57,7 @@ function required_for_pub_form_alter(&$form, &$form_state, $form_id) {
     if (is_array($fields)) {
       foreach ($fields as $field) {
         // Make sure at least one field is set as required_for_pub
-        if ($field['und']['instance']) {
+        if ($field[LANGUAGE_NONE]['instance']) {
           $form['options']['status']['#default_value'] = TRUE;
           return;
         }
@@ -94,13 +94,13 @@ function required_for_pub_element_info() {
  */
 function required_for_pub_element_process($element, &$form_state, $complete_form) {
   // Do nothing if it's not a node editing form or it required_for_pub is not enabled in this field.
-  if (isset($form_state['field'][$element['#parents'][0]]['und']['instance']['required_for_pub'])) {
-    if ($complete_form['#node_edit_form'] != TRUE || !$form_state['field'][$element['#parents'][0]]['und']['instance']['required_for_pub']) {
+  if (isset($form_state['field'][$element['#parents'][0]][LANGUAGE_NONE]['instance']['required_for_pub'])) {
+    if ($complete_form['#node_edit_form'] != TRUE || !$form_state['field'][$element['#parents'][0]][LANGUAGE_NONE]['instance']['required_for_pub']) {
     return $element;
     }
   // Set the #required_for_pub property on the element itself.
     if ($element['#required_for_pub'] == FALSE && isset($form_state['field'][$element['#parents'][0]])) {
-      $element['#required_for_pub'] = $form_state['field'][$element['#parents'][0]]['und']['instance']['required_for_pub'] == 1 ? TRUE : FALSE;
+      $element['#required_for_pub'] = $form_state['field'][$element['#parents'][0]][LANGUAGE_NONE]['instance']['required_for_pub'] == 1 ? TRUE : FALSE;
     }
   }
   return $element;
