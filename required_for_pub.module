@@ -138,16 +138,6 @@ function required_for_pub_is_empty($element) {
 }
 
 /**
- * Implementation of hook_multistep_update_status().
- * If a required_for_pub field is empty, keep the status of the current step as incomplete.
- */
-// TODO: D7 Multistep integration.
-/*function required_for_pub_multistep_update_status($form_state, $status, $step) {
-  $step = _multistep_get_current_step($form_state['values']['type']);
-  return $form_state['values']['required_for_pub'][$step];
-} */
-
-/**
  * Add the required asterisk to the field label.
  */
 function required_for_pub_element_required(&$html, $element) {
