@@ -50,9 +50,6 @@ function _required_for_pub_field_settings_validate($element, &$form_state) {
  * Implements of hook_form_alter().
  */
 function required_for_pub_form_alter(&$form, &$form_state, $form_id) {
-  dpm($form);
-  dpm($form_state);
-  dpm($form_id);
   // If node publishing is enabled, mark the checkbox regardless of the current status.
   if (isset($form['#node']) && array_search('status', variable_get('node_options_' . $form['#node']->type, array())) !== FALSE) {
     $fields = $form_state['field'];
