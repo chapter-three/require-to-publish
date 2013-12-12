@@ -122,12 +122,6 @@ function required_for_pub_element_validate($element, &$form_state) {
       // TODO: Find this variable.
       $form_state['values']['status'] = 0;
       drupal_set_message(t('%field field is required for publishing.', array('%field' => $element['#title'])), 'warning');
-      // TODO: D7 Multistep integration.
-      // Multistep integration - Keep the status of the current step as incomplete.
-      /* if (module_exists('multistep') && variable_get('multistep_expose_' . $form_state['values']['type'], 'disabled') == 'enabled') {
-        $step = _multistep_get_current_step($form_state['values']['type']);
-        $form_state['values']['required_for_pub'][$step] = 'unsubmitted';
-      } */
     }
   }
 }
