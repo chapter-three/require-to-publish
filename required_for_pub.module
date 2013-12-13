@@ -31,8 +31,9 @@ function required_for_pub_form_field_ui_field_edit_form_alter(&$form, &$form_sta
     '#type' => 'checkbox',
     '#title' => t('Required for publishing'),
     '#description' => t('Allows the form to be saved in unpublished state without entering the required fields.'),
-    '#default_value' => isset($form['#instance']['required_for_pub']) ? $form['#instance']['required_for_pub'] : FALSE,
-    '#element_validate' => array('_required_for_pub_field_settings_validate'),
+    // REMOVED - '#default_value' => isset($form['#instance']['required_for_pub']) ? $form['#instance']['required_for_pub'] : FALSE,
+    '#default_value' => empty($form['#instance']['required_for_pub']) ? 0 : 1,  // new way
+    // REMOVED: '#element_validate' => array('_required_for_pub_field_settings_validate'),
     '#weight' => -9,
   );
 }
@@ -40,7 +41,7 @@ function required_for_pub_form_field_ui_field_edit_form_alter(&$form, &$form_sta
 /**
  * Make sure both the required and required_for_pub checkboxes are not checked simultaneously.
  */
-function _required_for_pub_field_settings_validate($element, &$form_state) {
+function DEPRECATED_required_for_pub_field_settings_validate($element, &$form_state) {
   if ($form_state['values']['instance']['required'] == 1 && $form_state['values']['instance']['required_for_pub'] == 1) {
     form_set_error('required_for_pub', t('You cannot have a field be both required and required for publishing.'));
   }
@@ -49,7 +50,7 @@ function _required_for_pub_field_settings_validate($element, &$form_state) {
 /**
  * Implements of hook_element_info().
  */
-function required_for_pub_element_info() {
+function DEPRECATED_required_for_pub_element_info() {
   // ToDo: $element must be a field then pass to process.
   // Because not every element has #field_name.
   $types['textfield'] = array(
@@ -72,7 +73,7 @@ function required_for_pub_element_info() {
 /**
  * Form element process function to add required for publishing.
  */
-function required_for_pub_element_process($element, &$form_state, $complete_form) {
+function DEPRECATED_required_for_pub_element_process($element, &$form_state, $complete_form) {
   // Do nothing if it's not a node editing form or it required_for_pub is not enabled in this field.
   if (isset($form_state['field'][$element['#parents'][0]][LANGUAGE_NONE]['instance']['required_for_pub'])) {
     if ($complete_form['#node_edit_form'] != TRUE || !$form_state['field'][$element['#parents'][0]][LANGUAGE_NONE]['instance']['required_for_pub']) {
@@ -87,33 +88,49 @@ function required_for_pub_element_process($element, &$form_state, $complete_form
 }
 
 /**
+ * WE DO NO WANT VALIDATION AT THE FIELD LEVEL.
  * Prevent publishing of the node if field not filled.
  */
-function required_for_pub_element_validate($element, &$form_state) {
+function DEPRECATED_required_for_pub_element_validate($element, &$form_state) {
+
+  if (isset($element['#entity'])) {
+    $entity = $element['#entity'];
+    $status = $entity->status;
+  }
+  
   if ($element['#required_for_pub']) {
-    if (required_for_pub_is_empty($element) && ($form_state['values']['status'] == 1)) {
-      // TODO: Find this variable.
+    // Get all the different widgets of a field
+    $element_children = array();
+    foreach (element_children($element) as $child) {
+      if (strpos($child, '_') !== 0) {
+        $element_children[] = $child;
+      }
+    }
+    if (required_for_pub_is_empty($element)) {
       $form_state['values']['status'] = 0;
+      drupal_set_message(t('%field field is required for publishing.', array('%field' => $element['#title'])), 'warning');
       form_set_error('required_for_pub', t('%field field is required for publishing. You must fill in %field field or unpublish this node in order to save any changes', array('%field' => $element['#title'])));
     }
   }
-  //$form_state['values']['status'] = 0;
 }
 
 /**
  * Check whether the field element is empty.
  */
-function required_for_pub_is_empty($element) {
-  if (empty($element['#value']) || (is_string($element['#value']) && strlen(trim($element['#value'])) == 0)) {
+function DEPRECATED_required_for_pub_is_empty($element) {
+
+  if (!isset($element['#value']) || (is_string($element['#value']) && strlen(trim($element['#value'])) == 0)) {
+    
     return TRUE;
   }
   return FALSE;
 }
 
+
 /**
  * Add the required asterisk to the field label.
  */
-function required_for_pub_element_required(&$html, $element) {
+function DEPRECATED_required_for_pub_element_required(&$html, $element) {
   if (!empty($element['#required_for_pub'])) {
     // Get all the different widgets of a field
     foreach (element_children($element) as $child) {
@@ -131,3 +148,82 @@ function required_for_pub_element_required(&$html, $element) {
   }
   return $html;
 }
+
+/**
+ * Implements hook_field_attach_form()
+ */
+function required_for_pub_field_attach_form($entity_type, $entity, &$form, &$form_state, $langcode = NULL, $options = array()) {
+
+  $form['#validate'][] = 'required_for_pub_form_validate';
+
+  $obj = entity_metadata_wrapper('node', $entity);
+
+  // get all fields in the node form_state
+  $fields = $form_state['field'];
+
+  $fields_required_for_pub = array();  
+  foreach ($fields as $field_name => $arr) {
+    if (!isset($arr[$langcode]['instance']['required_for_pub'])) { // value can be 0 or NULL
+      continue;
+    }
+    
+    if ( $arr[$langcode]['instance']['required_for_pub'] == 1 ) {  // create an array of fields where required_for_pub is  TRUE // TODO: no need for an if . already checked by isset 4 lines above
+      $fields_required_for_pub[] = $field_name;    
+    }
+  }
+  
+  $form_state['required_for_pub']['#fields'] = $fields_required_for_pub;
+}
+
+
+
+function required_for_pub_form_validate($form, &$form_state) {
+
+  $status = $form_state['values']['status'];
+  $lang = $form_state['values']['language'];  
+  $empty_fields = array();
+
+  foreach ($form_state['required_for_pub']['#fields'] as $key => $field_name) {
+    
+    // get the item of the field
+    $item =  $form_state['values'][$field_name][$lang][0];
+    
+    // get the field info
+    $field = field_info_field($field_name);
+    
+    // get the module that defined the hook_field_is_empty
+    $module = $field['module'];
+    
+    
+    // call the function field_is_empty defined in specific module that defined the field
+    $func = $module.'_field_is_empty';
+    $field_is_empty = call_user_func($func, $item, $field);
+    
+    // OLD WAY: todo - replace this with check on field is empty to account for all field types
+    if (!isset($form_state['values'][$field_name][$lang][0]['value'])) {
+      //$empty_fields[] = $field_name;
+    }
+    
+    // NEW WAY:  TO CHECK for field is empty
+    if ($field_is_empty) {
+      $empty_fields[] = $field_name;
+    }
+  }
+
+  
+  // the most important validation
+  $field_string = "";
+  if ($status == 1 && !empty($empty_fields) ) {
+    foreach ($empty_fields as $key => $field_name) {
+      $field_string = $field_name.' ,'. $field_string;
+    }
+    form_set_error('required_for_pub', t('%field field is required for publishing. You must fill in %field field or unpublish this node in order to save any changes', array('%field' => $field_string)));
+    return FALSE;
+  }
+  else {
+    return TRUE;
+  }
+  return FALSE;
+}
+
+
