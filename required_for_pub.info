@@ -1,6 +1,6 @@
 name = Required for Publishing
 description = Allows forms to be filled without required fields before publishing.
-;dependencies[] = field
+dependencies[] = entity
 core = 7.x
 ;configure = admin/config/content/validation
 
