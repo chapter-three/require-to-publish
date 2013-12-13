@@ -18,7 +18,7 @@ function required_for_pub_field_info_alter(&$info) {
   foreach ($info as $field_type => &$field_type_info) {
   $field_type_info += array('instance_settings' => array());
 	$field_type_info['instance_settings'] += array(
-      'required_for_pub' => FALSE,
+      'required_for_pub' => false,
     );
   }
 }
@@ -27,7 +27,10 @@ function required_for_pub_field_info_alter(&$info) {
  * Implements of hook_field_ui_field_edit_form_alter(&$form, &$form_state, $form_id).
  */
 function required_for_pub_form_field_ui_field_edit_form_alter(&$form, &$form_state, $form_id) {
-  $form['instance']['required_for_pub'] = array(
+
+  $form['instance']['required']['#disabled'] = TRUE;  // this is temporary for debugging
+  
+  $DEPRECATEDxxxform['instance']['required_for_pub'] = array(
     '#type' => 'checkbox',
     '#title' => t('Required for publishing'),
     '#description' => t('Allows the form to be saved in unpublished state without entering the required fields.'),
@@ -36,7 +39,50 @@ function required_for_pub_form_field_ui_field_edit_form_alter(&$form, &$form_sta
     // REMOVED: '#element_validate' => array('_required_for_pub_field_settings_validate'),
     '#weight' => -9,
   );
+  
+  // user can now choose from 3 options: required, reuired_for_pub, or not required
+  $form['instance']['required_for_pub'] = array(
+    '#type' => 'radios',
+    '#title' => t('Required for publishing'),
+    '#description' => t('Allows the form to be saved in unpublished state without entering the required fields.'),
+    '#default_value' => empty($form['#instance']['required_for_pub']) ? NULL : $form['#instance']['required_for_pub'], 
+    '#weight' => -9,
+    '#options' => array(
+      'not_required' => 'Not Required',
+      'required' => 'Required field',
+      'required_for_pub' => 'Required for publishing',
+    ),  
+  ); 
+  
+  $form['#validate'][] = '_required_for_pub_field_settings_validate';
 }
+
+
+function _required_for_pub_field_settings_validate($form, &$form_state) {
+
+  // choice is either 'required' or 'required_for_pub_2'
+  $choice = $form_state['values']['instance']['required_for_pub'];
+  
+  
+  switch ($choice) {
+    case 'required':
+      $form_state['values']['instance']['required'] = 1;
+      $form_state['values']['instance']['required_for_pub'] = 'required';
+      break;
+    case 'required_for_pub':
+      $form_state['values']['instance']['required_for_pub'] = 'required_for_pub';
+      $form_state['values']['instance']['required'] = 0;
+      break;      
+    case 'not_required':
+      $form_state['values']['instance']['required_for_pub'] = 'not_required';
+      $form_state['values']['instance']['required'] = 0;
+      break;  
+  }
+  return TRUE;
+}
+
+
+
 
 /**
  * Make sure both the required and required_for_pub checkboxes are not checked simultaneously.
@@ -166,8 +212,7 @@ function required_for_pub_field_attach_form($entity_type, $entity, &$form, &$for
     if (!isset($arr[$langcode]['instance']['required_for_pub'])) { // value can be 0 or NULL
       continue;
     }
-    
-    if ( $arr[$langcode]['instance']['required_for_pub'] == 1 ) {  // create an array of fields where required_for_pub is  TRUE // TODO: no need for an if . already checked by isset 4 lines above
+    if ( $arr[$langcode]['instance']['required_for_pub'] == 'required_for_pub' ) {  // create an array of fields where required_for_pub is  TRUE // TODO: no need for an if . already checked by isset 4 lines above
       $fields_required_for_pub[] = $field_name;    
     }
   }
@@ -235,7 +280,6 @@ function required_for_pub_form_validate($form, &$form_state) {
       $empty_fields[] = $field_name;
     }
   }
-
   
   // the most important validation
   $field_string = "";
