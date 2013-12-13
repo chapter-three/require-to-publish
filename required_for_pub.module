@@ -184,27 +184,53 @@ function required_for_pub_form_validate($form, &$form_state) {
   $empty_fields = array();
 
   foreach ($form_state['required_for_pub']['#fields'] as $key => $field_name) {
-    
-    // get the item of the field
-    $item =  $form_state['values'][$field_name][$lang][0];
-    
+    if (empty($form_state['values'][$field_name][$lang][0])) {
+      $item = $form_state['values'][$field_name][$lang];  // some fields do not use any delta . example: term reference does not use the 0 offset when the field is empty
+    }
+    else { 
+      $item =  $form_state['values'][$field_name][$lang][0];
+    }  
+
     // get the field info
     $field = field_info_field($field_name);
-    
+
     // get the module that defined the hook_field_is_empty
     $module = $field['module'];
     
+    // get the field type
+    $field_type = $field['type'];
     
     // call the function field_is_empty defined in specific module that defined the field
     $func = $module.'_field_is_empty';
-    $field_is_empty = call_user_func($func, $item, $field);
+    
+
+    // special handling for booleans
+    // NOTE: the list.module's hook_field_is_empty specifies this: 
+    // if (empty($item['value']) && (string) $item['value'] !== '0') { return TRUE; }
+    // paramter $item passed is array('value' => 0) -- if user has not clicked the wdiget form
+    // which means that the boolean field will always return hook_field_is_empty to be FALSE -- that is, the field contains data. when in fact, it should be treated as EMPTY.
+    // hence, we convert the value from 0 to NULL or set $item to NULL
+    if ($field_type == 'list_boolean') {
+      if ($item['value'] == 0) {
+        //$item['value'] = NULL;
+        $item = NULL;
+      }
+    }
+    
+    // special handling for fields that do no use delta or the 0 offset.
+    if (empty($item)) {
+      $field_is_empty = TRUE;
+    }
+    else { 
+      $field_is_empty = call_user_func($func, $item, $field);
+    }
     
     // OLD WAY: todo - replace this with check on field is empty to account for all field types
     if (!isset($form_state['values'][$field_name][$lang][0]['value'])) {
       //$empty_fields[] = $field_name;
     }
     
-    // NEW WAY:  TO CHECK for field is empty
+    // NEW WAY:  TO CHECK if field is empty -- this will account for all field types
     if ($field_is_empty) {
       $empty_fields[] = $field_name;
     }
