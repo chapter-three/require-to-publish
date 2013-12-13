@@ -106,8 +106,6 @@ function required_for_pub_element_validate($element, &$form_state) {
  */
 function required_for_pub_is_empty($element) {
   if (empty($element['#value']) || (is_string($element['#value']) && strlen(trim($element['#value'])) == 0)) {
-  //if (empty($element['#value'])) {
-    dpm('zomg');
     return TRUE;
   }
   return FALSE;
