@@ -94,7 +94,6 @@ function required_for_pub_element_validate($element, &$form_state) {
     if (required_for_pub_is_empty($element) && ($form_state['values']['status'] == 1)) {
       // TODO: Find this variable.
       $form_state['values']['status'] = 0;
-      drupal_set_message(t('%field field is required for publishing.', array('%field' => $element['#title'])), 'warning');
       form_set_error('required_for_pub', t('%field field is required for publishing. You must fill in %field field or unpublish this node in order to save any changes', array('%field' => $element['#title'])));
     }
   }
