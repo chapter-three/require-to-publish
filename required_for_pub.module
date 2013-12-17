@@ -36,7 +36,6 @@ function required_for_pub_form_field_ui_field_edit_form_alter(&$form, &$form_sta
     '#description' => t('Allows the form to be saved in unpublished state without entering the required fields.'),
     // REMOVED - '#default_value' => isset($form['#instance']['required_for_pub']) ? $form['#instance']['required_for_pub'] : FALSE,
     '#default_value' => empty($form['#instance']['required_for_pub']) ? 0 : 1,  // new way
-    // REMOVED: '#element_validate' => array('_required_for_pub_field_settings_validate'),
     '#weight' => -9,
   );
   
@@ -90,15 +89,7 @@ function _required_for_pub_field_settings_validate($form, &$form_state) {
  */
 function required_for_pub_field_attach_form($entity_type, $entity, &$form, &$form_state, $langcode = NULL, $options = array()) {
   $lang = $form['field_test']['#language'];
-  // debug($lang);
-  // debug($form['field_test'][$lang][0]);
-  // debug($form['field_image'][$lang][0]);
-  // debug($form['field_test']);
-  
-  
-  // $form['field_test_2']['#attributes']['class'][] = 'form-required';
-  // $form['field_test'][$lang][0][
-  
+
   drupal_add_css(drupal_get_path('module', 'required_for_pub') . '/css/required_for_pub.css', array('group' => CSS_DEFAULT, 'every_page' => TRUE));
   
   $form['#validate'][] = 'required_for_pub_form_validate';
