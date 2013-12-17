@@ -89,27 +89,61 @@ function _required_for_pub_field_settings_validate($form, &$form_state) {
  * Implements hook_field_attach_form()
  */
 function required_for_pub_field_attach_form($entity_type, $entity, &$form, &$form_state, $langcode = NULL, $options = array()) {
-
+  $lang = $form['field_test']['#language'];
+  debug($lang);
+  debug($form['field_test'][$lang][0]);
+  debug($form['field_image'][$lang][0]);
+  debug($form['field_test']);
+  
+  
+  // $form['field_test_2']['#attributes']['class'][] = 'form-required';
+  // $form['field_test'][$lang][0][
+  
+  drupal_add_css(drupal_get_path('module', 'required_for_pub') . '/css/required_for_pub.css', array('group' => CSS_DEFAULT, 'every_page' => TRUE));
+  
   $form['#validate'][] = 'required_for_pub_form_validate';
 
   $obj = entity_metadata_wrapper('node', $entity);
 
   // get all fields in the node form_state
   $fields = $form_state['field'];
-
+  
   $fields_required_for_pub = array();  
   foreach ($fields as $field_name => $arr) {
-    if (!isset($arr[$langcode]['instance']['required_for_pub'])) { // value can be 0 or NULL
+  
+    if (empty($arr[$langcode]['instance']['required_for_pub'])) { // value can be 0 or NULL    
+    //if (!isset($arr[$langcode]['instance']['required_for_pub'])) { // value can be 0 or NULL
       continue;
     }
+    debug($arr[$langcode]['instance']['required_for_pub']);
     if ( $arr[$langcode]['instance']['required_for_pub'] == 'required_for_pub' ) {  // create an array of fields where required_for_pub is  TRUE // TODO: no need for an if . already checked by isset 4 lines above
-      $fields_required_for_pub[] = $field_name;    
+      debug($field_name);
+      $fields_required_for_pub[] = $field_name;   
+      
+      // SOLUTION 1: using css to add the *
+      // add css to the div wrapping the field
+      $form[$field_name]['#attributes']['class'][] = 'required-for-pub'; 
+      
+      
+      // SOLUTION 2: - using theme registry alter 
+      // debug($form[$field_name][$langcode]);
+      $form[$field_name][$langcode]['#theme_required_for_pub']['description_at_top'] = '*Required for content to be published.'; 
+      
+      //debug($form[$field_name][$langcode]); 
+      
+     // debug($form[$field_name]['#description']);
+      //debug($form[$field_name]); 
     }
+    
+    
   }
   $form_state['required_for_pub']['#fields'] = $fields_required_for_pub;
+
 }
 
-
+function required_for_pub_preprocess_field($var) {
+  debug($var);
+}
 
 /**
  * Custom validation for the entity add or edit forms
@@ -189,3 +223,132 @@ function required_for_pub_form_validate($form, &$form_state) {
 }
 
 
+
+
+function required_for_pub_theme() {
+  return array(
+    'required_for_pub' => array(
+      'variables' => array('required_for_pub' => NULL, 'element' => null),
+    ),
+  );
+}
+
+
+function theme_required_for_pub(&$var) {
+  debug($var);
+  // $var['required_for_pub'] = '<p>Test789</p>';
+  // return '<p>Test456</p>';
+}
+
+
+
+
+/**
+ * Implements hook_theme_registry_alter().
+ */
+function required_for_pub_theme_registry_alter(&$theme_registry) {
+  // Set our custom function for theming form_element_label.
+  // Duplicate the original theme hook, under a new name. This
+  // will allow us to 'wrap' the theme function without
+  // breaking it.
+  $theme_registry['form_element_label_required_for_pub'] = $theme_registry['form_element_label'];
+
+  // Because we don't need to count on drupal to re-load this file
+  // we're going to only override the 'function' key
+  // and leave the 'theme path' etc. to the core setting
+  // to avoid potential problems down the road if
+  // core changes.
+  
+  $theme_registry['form_element_label']['function'] = 'required_for_pub_theme_form_element_label';
+  
+  debug($theme_registry['form_element_label']);
+}
+
+
+/**
+ * Replacement for core theme_form_element_label function.
+ *
+ * Prints #description at top of field output.
+ * Because of jujitsu happening in FAPI theming/wrapping,
+ * ctools and WYSIWYG, we have to jump through some hoops 
+ * to pull this off.
+ *
+ * @param Array $variables
+ *   An array containing an element.
+ */
+function required_for_pub_theme_form_element_label($variables) {
+  $desc = '';
+
+
+
+  /*
+  if (isset($variables['element']['#theme_options']['description at top']) && !empty($variables['element']['#theme_options']['description at top'])) {
+    $desc = '<div class="description">' . t($variables['element']['#theme_options']['description at top']) . '</div>';
+  }  
+  
+  */ // orginal
+  //debug($variables['element']);
+ 
+  $text_required_for_pub = NULL;
+  
+  if (isset($variables['element']['#theme_required_for_pub']['description_at_top']) && !empty($variables['element']['#theme_required_for_pub']['description_at_top'])) {
+   $text_required_for_pub = '<div class="description">' . t($variables['element']['#theme_required_for_pub']['description_at_top']) . '</div>';
+  }
+  
+  //$text_required_for_pub = '<div class="description">'.'*Required for content to be published.'.'</div>';
+  // Pass element through the "real" theme hook.
+  return theme('form_element_label_required_for_pub', $variables) . $text_required_for_pub ;
+}
+
+
+/**
+ * Implements hook_form_alter().
+ */
+function required_for_pub_form_alter(&$form, &$form_state, $form_id) {
+  foreach ($form as $key => $item) {
+    debug($key);
+    debug($item);
+    if (is_array($item) && isset($item[LANGUAGE_NONE])) {
+      // Put comments above the label for field forms of type 'container'
+      // that are specifically configured.
+      if (isset($item['#type']) && $item['#type'] == 'container' && isset($item[LANGUAGE_NONE][0])
+        && isset($item[LANGUAGE_NONE][0]['#entity_type']) && isset($item[LANGUAGE_NONE][0]['#field_name']) && isset($item[LANGUAGE_NONE][0]['#bundle'])
+      ) {
+        $entity_type = $item[LANGUAGE_NONE][0]['#entity_type'];
+        $field_name = $item[LANGUAGE_NONE][0]['#field_name'];
+        $bundle_name = $item[LANGUAGE_NONE][0]['#bundle'];
+        $instance = field_info_instance($entity_type, $field_name, $bundle_name);
+        //if (isset($instance['widget']['settings']['label_help_description'])) {
+          // Quirks:
+          // $form[$key][LANGUAGE_NONE][0]['#theme_options'] has to be set to get
+          // this working for textarea fields, and
+          // form[$key][LANGUAGE_NONE][0]['value']['#theme_options' has to be set
+          // to get this working for one-line text fields.
+          $form[$key][LANGUAGE_NONE][0]['#theme_required_for_pub'] = $form[$key][LANGUAGE_NONE][0]['value']['#theme_required_for_pub'] = array(
+            'description_at_top' => '*Required for content to be published.',
+          );
+        //}
+      }
+      // Move comments to the top for other field forms that
+      // are specifically configured.
+      elseif (isset($item[LANGUAGE_NONE]['#entity_type']) && isset($item[LANGUAGE_NONE]['#field_name']) && isset($item[LANGUAGE_NONE]['#bundle'])) {
+        $entity_type = $item[LANGUAGE_NONE]['#entity_type'];
+        $field_name = $item[LANGUAGE_NONE]['#field_name'];
+        $bundle_name = $item[LANGUAGE_NONE]['#bundle'];
+        $instance = field_info_instance($entity_type, $field_name, $bundle_name);
+        if (isset($instance['widget']['settings']['label_help_description'])) {
+          $form[$key][LANGUAGE_NONE]['#theme_options'] = $form[$key][LANGUAGE_NONE]['value']['#theme_options'] = array(
+            'description at top' => $instance['widget']['settings']['label_help_description'],
+          );
+          debug($form[$key][LANGUAGE_NONE]);
+          $form[$key][LANGUAGE_NONE]['#theme_options'] = $form[$key][LANGUAGE_NONE]['value']['#theme_options'] = array(
+            'description at top' => '*Required for content to be published.',
+          ); 
+          $form[$key][LANGUAGE_NONE]['#theme_required_for_pub'] = $form[$key][LANGUAGE_NONE]['value']['#theme_required_for_pub'] = array(
+            'description_at_top' => '*Required for content to be published.',
+          );        
+        }
+      }
+    }
+  }
+}
