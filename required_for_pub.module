@@ -29,31 +29,21 @@ function required_for_pub_field_info_alter(&$info) {
 function required_for_pub_form_field_ui_field_edit_form_alter(&$form, &$form_state, $form_id) {
 
   $form['instance']['required']['#access'] = FALSE;  // the 'Require field' form element will be handled by the form element below -- as one of the options.
-  
-  $DEPRECATEDxxxform['instance']['required_for_pub'] = array(
-    '#type' => 'checkbox',
-    '#title' => t('Required for publishing'),
-    '#description' => t('Allows the form to be saved in unpublished state without entering the required fields.'),
-    // REMOVED - '#default_value' => isset($form['#instance']['required_for_pub']) ? $form['#instance']['required_for_pub'] : FALSE,
-    '#default_value' => empty($form['#instance']['required_for_pub']) ? 0 : 1,  // new way
-    // REMOVED: '#element_validate' => array('_required_for_pub_field_settings_validate'),
-    '#weight' => -9,
-  );
-  
+
   // user can now choose from 3 options: required, reuired_for_pub, or not required
   $form['instance']['required_for_pub'] = array(
     '#type' => 'radios',
     '#title' => t('Required for publishing'),
     '#description' => t('Allows the form to be saved in unpublished state without entering the required fields.'),
-    '#default_value' => empty($form['#instance']['required_for_pub']) ? NULL : $form['#instance']['required_for_pub'], 
+    '#default_value' => empty($form['#instance']['required_for_pub']) ? NULL : $form['#instance']['required_for_pub'],
     '#weight' => -9,
     '#options' => array(
       'not_required' => 'Not Required',
       'required' => 'Required field',
       'required_for_pub' => 'Required for publishing',
-    ),  
-  ); 
-  
+    ),
+  );
+
   $form['#validate'][] = '_required_for_pub_field_settings_validate';
 }
 
@@ -64,7 +54,7 @@ function _required_for_pub_field_settings_validate($form, &$form_state) {
 
   // choice is either 'required' or 'required_for_pub_2'
   $choice = $form_state['values']['instance']['required_for_pub'];
-  
+
   switch ($choice) {
     case 'required':
       $form_state['values']['instance']['required'] = 1;
@@ -73,11 +63,11 @@ function _required_for_pub_field_settings_validate($form, &$form_state) {
     case 'required_for_pub':
       $form_state['values']['instance']['required_for_pub'] = 'required_for_pub';
       $form_state['values']['instance']['required'] = 0;
-      break;      
+      break;
     case 'not_required':
       $form_state['values']['instance']['required_for_pub'] = 'not_required';
       $form_state['values']['instance']['required'] = 0;
-      break;  
+      break;
   }
   return TRUE;
 }
@@ -107,8 +97,13 @@ function required_for_pub_field_attach_form($entity_type, $entity, &$form, &$for
 
   // get all fields in the node form_state
   $fields = $form_state['field'];
+<<<<<<< HEAD
   
   $fields_required_for_pub = array();  
+=======
+
+  $fields_required_for_pub = array();
+>>>>>>> 15ffff8e0f558cdf3f537a665cd992efe9c39f0f
   foreach ($fields as $field_name => $arr) {
   
     if (empty($arr[$langcode]['instance']['required_for_pub'])) { // value can be 0 or NULL    
@@ -117,6 +112,7 @@ function required_for_pub_field_attach_form($entity_type, $entity, &$form, &$for
     }
     debug($arr[$langcode]['instance']['required_for_pub']);
     if ( $arr[$langcode]['instance']['required_for_pub'] == 'required_for_pub' ) {  // create an array of fields where required_for_pub is  TRUE // TODO: no need for an if . already checked by isset 4 lines above
+<<<<<<< HEAD
       debug($field_name);
       $fields_required_for_pub[] = $field_name;   
       
@@ -133,6 +129,9 @@ function required_for_pub_field_attach_form($entity_type, $entity, &$form, &$for
       
      // debug($form[$field_name]['#description']);
       //debug($form[$field_name]); 
+=======
+      $fields_required_for_pub[] = $field_name;
+>>>>>>> 15ffff8e0f558cdf3f537a665cd992efe9c39f0f
     }
     
     
@@ -151,31 +150,31 @@ function required_for_pub_preprocess_field($var) {
 function required_for_pub_form_validate($form, &$form_state) {
 
   $status = $form_state['values']['status'];
-  $lang = $form_state['values']['language'];  
+  $lang = $form_state['values']['language'];
   $empty_fields = array();
 
   foreach ($form_state['required_for_pub']['#fields'] as $key => $field_name) {
     if (empty($form_state['values'][$field_name][$lang][0])) {
       $item = $form_state['values'][$field_name][$lang];  // some fields do not use any delta or the 0 offset. example: term reference does not use the 0 offset when the field is empty
     }
-    else { 
+    else {
       $item =  $form_state['values'][$field_name][$lang][0];
-    }  
+    }
 
     // get the field info
     $field = field_info_field($field_name);
 
     // get the module that defined the hook_field_is_empty
     $module = $field['module'];
-    
+
     // get the field type
     $field_type = $field['type'];
-    
+
     // get the function name which is in this format: called module_field_is_empty(), where module is the module that defined the field
     $func = $module.'_field_is_empty';
-    
+
     // special handling for booleans
-    // NOTE: the list.module's hook_field_is_empty specifies this: 
+    // NOTE: the list.module's hook_field_is_empty specifies this:
     // if (empty($item['value']) && (string) $item['value'] !== '0') { return TRUE; }
     // paramter $item passed is array('value' => 0) -- if user has not clicked the wdiget form
     // which means that the boolean field will always return hook_field_is_empty to be FALSE -- that is, the field contains data. when in fact, it should be treated as EMPTY.
@@ -186,35 +185,35 @@ function required_for_pub_form_validate($form, &$form_state) {
         $item = NULL;
       }
     }
-    
+
     // special handling for fields that do no use delta or the 0 offset.
     if (empty($item)) {
       $field_is_empty = TRUE;
     }
-    else { 
+    else {
       $field_is_empty = call_user_func($func, $item, $field);
     }
-    
+
     // TO CHECK if field is empty -- this will account for all field types
     if ($field_is_empty) {
       $empty_fields[] = $field_name;
     }
   }
-  
+
   // the most important validation
   $field_string = "";
   $digit = 1;
   if ($status == 1 && !empty($empty_fields) ) {
-    form_set_error('required_for_pub', t('You must do "a" or "b": <p>a. Save this node as DRAFT - by unchecking the publish state.</p> <p>b. Or leave the node as published but FILL UP the fields listed below.</p>'));       
+    form_set_error('required_for_pub', t('You must do "a" or "b": <p>a. Save this node as DRAFT - by unchecking the publish state.</p> <p>b. Or leave the node as published but FILL UP the fields listed below.</p>'));
 
     foreach ($empty_fields as $key => $field_name) {
       $field_string = $field_name;
       form_set_error('required_for_pub'.'_'.$field_name, t('%digit. %field_name', array('%field_name' => $field_string, '%digit' => $digit)));
       $digit = $digit + 1;
     }
-    
+
     return FALSE;
-    
+
   }
   else {
     return TRUE;
