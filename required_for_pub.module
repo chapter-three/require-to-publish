@@ -355,3 +355,4 @@ function required_for_pub_form_alter(&$form, &$form_state, $form_id) {
     }
   }
 }
+
