@@ -11,7 +11,7 @@ function required_for_pub_help($path, $arg) {
 }
 
 /**
- * Implements of hook_field_info_alter(&$info).
+ * Implements hook_field_info_alter(&$info).
  */
 function required_for_pub_field_info_alter(&$info) {
   // Add a setting to all field types.
@@ -24,7 +24,7 @@ function required_for_pub_field_info_alter(&$info) {
 }
 
 /**
- * Implements of hook_field_ui_field_edit_form_alter(&$form, &$form_state, $form_id).
+ * Implements hook_field_ui_field_edit_form_alter(&$form, &$form_state, $form_id).
  */
 function required_for_pub_form_field_ui_field_edit_form_alter(&$form, &$form_state, $form_id) {
 
@@ -40,7 +40,7 @@ function required_for_pub_form_field_ui_field_edit_form_alter(&$form, &$form_sta
     '#weight' => -9,
   );
   
-  // user can now choose from 3 options: required, reuired_for_pub, or not required
+  // user can now choose from 3 options: required, required_for_pub, or not required
   $form['instance']['required_for_pub'] = array(
     '#type' => 'radios',
     '#title' => t('Required for publishing'),
@@ -62,7 +62,7 @@ function required_for_pub_form_field_ui_field_edit_form_alter(&$form, &$form_sta
  */
 function _required_for_pub_field_settings_validate($form, &$form_state) {
 
-  // choice is either 'required' or 'required_for_pub_2'
+  // choice can be  'required' or 'required_for_pub' or 'not_required'
   $choice = $form_state['values']['instance']['required_for_pub'];
   
   switch ($choice) {
@@ -304,8 +304,12 @@ function required_for_pub_theme_form_element_label($variables) {
 function required_for_pub_form_alter(&$form, &$form_state, $form_id) {
   //debug($form_state['required_for_pub']['#fields']);
   
-  $field_required_for_pub = $form_state['required_for_pub']['#fields'];
-  
+  if (empty($form_state['required_for_pub']['#fields'])) {
+    return;
+  }
+  else {
+    $field_required_for_pub = $form_state['required_for_pub']['#fields'];
+  }
   foreach ($form as $key => $item) {
     //debug($key);
     //debug($item);
