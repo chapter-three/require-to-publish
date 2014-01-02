@@ -1,3 +1,11 @@
+span.required-for-pub {
+  color: #AAA;
+  font-weight: normal;
+  font-size: 90%;
+  
+}
+
+
 
 .required-for-pub .form-item label:after {
   content: '* Required for content to be published';
@@ -10,4 +18,3 @@
   content: '';
   display: none;
 }
-

@@ -1,6 +1,6 @@
 name = Required for Publishing
-description = Allows forms to be filled without required fields before publishing.
-dependencies[] = entity
+description = Allows node add/edit forms to be "saved as draft" or "published." Fields can be configured to be required before content can be published.
+;dependencies[] = field
 core = 7.x
 ;configure = admin/config/content/validation
 
