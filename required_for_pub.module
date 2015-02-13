@@ -13,7 +13,7 @@
  *   useful when the #default_value is determined after the module is
  *   enabled.
  *
- * @see required_for_pub_form_field_ui_field_edit_form_alter()
+ * @see hook_field_attach_form
  */
 define('REQUIRED_FOR_PUB_NOT_REQUIRED', FALSE);
 define('REQUIRED_FOR_PUB_REQUIRED', TRUE);
@@ -54,7 +54,7 @@ function required_for_pub_form_field_ui_field_edit_form_alter(&$form, &$form_sta
     '#type' => 'radios',
     '#title' => t('Required for publishing'),
     '#description' => t('"Required for publishing" allows the form to be saved in unpublished state without entering the required fields.'),
-    '#default_value' => is_null($form['#instance']['required_for_pub']) ? $form['#instance']['required'] : $form['#instance']['required_for_pub'],
+    '#default_value' => isset($form['#instance']['required_for_pub']) ? $form['#instance']['required'] : $form['#instance']['required_for_pub'],
     '#weight' => -9,
     '#options' => array(
       REQUIRED_FOR_PUB_NOT_REQUIRED => t('Not Required'),
