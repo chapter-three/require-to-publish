@@ -7,9 +7,16 @@
 
 /**
  * Required state constants for fields.
+ *
+ * @note "Not required" and "Required" are booleans, to keep the
+ *   original values from the "Required field" checkbox. This is
+ *   useful when the #default_value is determined after the module is
+ *   enabled.
+ *
+ * @see required_for_pub_form_field_ui_field_edit_form_alter()
  */
-define('REQUIRED_FOR_PUB_NOT_REQUIRED', 0);
-define('REQUIRED_FOR_PUB_REQUIRED', 1);
+define('REQUIRED_FOR_PUB_NOT_REQUIRED', FALSE);
+define('REQUIRED_FOR_PUB_REQUIRED', TRUE);
 define('REQUIRED_FOR_PUB_REQUIRED_FOR_PUB', 2);
 
  
@@ -28,9 +35,9 @@ function required_for_pub_help($path, $arg) {
  */
 function required_for_pub_field_info_alter(&$info) {
   // Add the required_for_pub setting to all field types. Defaults
-  // to "not required". 
+  // to NULL in order to preserve earlier "Required field" setting. 
   foreach (array_keys($info) as $field_type) {
-    $info[$field_type]['instance_settings']['required_for_pub'] = REQUIRED_FOR_PUB_NOT_REQUIRED;
+    $info[$field_type]['instance_settings']['required_for_pub'] = NULL;
   }
 }
 
@@ -47,7 +54,7 @@ function required_for_pub_form_field_ui_field_edit_form_alter(&$form, &$form_sta
     '#type' => 'radios',
     '#title' => t('Required for publishing'),
     '#description' => t('"Required for publishing" allows the form to be saved in unpublished state without entering the required fields.'),
-    '#default_value' => empty($form['#instance']['required_for_pub']) ? NULL : $form['#instance']['required_for_pub'],
+    '#default_value' => is_null($form['#instance']['required_for_pub']) ? $form['#instance']['required'] : $form['#instance']['required_for_pub'],
     '#weight' => -9,
     '#options' => array(
       REQUIRED_FOR_PUB_NOT_REQUIRED => t('Not Required'),
@@ -87,8 +94,8 @@ function required_for_pub_permission() {
  * Implements hook_field_attach_form().
  */
 function required_for_pub_field_attach_form($entity_type, $entity, &$form, &$form_state, $langcode = NULL, $options = array()) {
-
-  if (!user_access('required_for_pub_save_draft')) {
+  // Only invoke module for node entities and users with permission to save drafts.
+  if ($entity_type !== 'node' || !user_access('required_for_pub_save_draft')) {
     return;
   }
 
@@ -99,19 +106,10 @@ function required_for_pub_field_attach_form($entity_type, $entity, &$form, &$for
   // get all fields in the node form_state
   $fields = $form_state['field'];
 
-  if ($entity_type == 'field_collection_item') {
-    return;  // field collection items trigger for the hook_field_attach_form  to be called again. so need need to process it again.
-  }
-
-  if ($entity_type != 'node')  {
-    return;
-  }
   $form_state['required_for_pub']['#fields_instances'] = array();
 
-  if ($entity_type == 'node') {
-    $field_info_instances = field_info_instances($entity_type, $entity->type );
-    $form_state['required_for_pub']['#fields_instances'][] = $field_info_instances;
-  }
+  $field_info_instances = field_info_instances($entity_type, $entity->type );
+  $form_state['required_for_pub']['#fields_instances'][] = $field_info_instances;
 
   $fields_required_for_pub = array();
 
@@ -125,7 +123,7 @@ function required_for_pub_field_attach_form($entity_type, $entity, &$form, &$for
     if (empty($field_info_instances[$field_name]['required_for_pub'])) { // value can be 0 or NULL
       continue;
     }
-    if ( $field_info_instances[$field_name]['required_for_pub'] == REQUIRED_FOR_PUB_REQUIRED_FOR_PUB) {  // create an array of fields where required_for_pub is  TRUE // TODO: no need for an if . already checked by isset 4 lines above
+    if ($field_info_instances[$field_name]['required_for_pub'] == REQUIRED_FOR_PUB_REQUIRED_FOR_PUB) {  // create an array of fields where required_for_pub is  TRUE // TODO: no need for an if . already checked by isset 4 lines above
       $fields_required_for_pub[] = $field_name;
       $form_state['required_for_pub']['#fields'][] = $field_name;
       // add css to the div wrapping the field
@@ -149,7 +147,7 @@ function required_for_pub_field_attach_form($entity_type, $entity, &$form, &$for
   }
 
   // Save as draft button will only show up on content types and if the module 'save_draft' is not enabled.
-  if ($entity_type == 'node' && !module_exists('save_draft') && !empty($fields_required_for_pub)) {
+  if (!module_exists('save_draft') && !empty($fields_required_for_pub)) {
     $form['actions']['required_for_pub_save_as_draft'] = array(
       '#type' => 'submit',
       '#access' => TRUE,
@@ -163,7 +161,6 @@ function required_for_pub_field_attach_form($entity_type, $entity, &$form, &$for
     $form['actions']['submit']['#value'] = 'Publish';
 
     $form['actions']['submit']['#name'] = 'drupal_core_save';
-    //$form['options']['status']['#access'] = FALSE;
   }
 }
 
@@ -199,7 +196,7 @@ function required_for_pub_form_validate($form, &$form_state) {
       $item = $form_state['values'][$field_name][$lang];  // some fields do not use any delta or the 0 offset. example: term reference does not use the 0 offset when the field is empty
     }
     else {
-      $item =  $form_state['values'][$field_name][$lang][0];
+      $item = $form_state['values'][$field_name][$lang][0];
     }
     // get the field info. Do not use field_get_fields -- it will harder to traverse the array for those fields nested in field collection
     $field = field_info_field($field_name);
