@@ -6,6 +6,14 @@
  */
 
 /**
+ * Required state constants for fields.
+ */
+define('REQUIRED_FOR_PUB_NOT_REQUIRED', 0);
+define('REQUIRED_FOR_PUB_REQUIRED', 1);
+define('REQUIRED_FOR_PUB_REQUIRED_FOR_PUB', 2);
+
+ 
+/**
  * Implements hook_help().
  */
 function required_for_pub_help($path, $arg) {
@@ -19,25 +27,22 @@ function required_for_pub_help($path, $arg) {
  * Implements hook_field_info_alter().
  */
 function required_for_pub_field_info_alter(&$info) {
-  // Add the required_for_pub setting to all field types.
+  // Add the required_for_pub setting to all field types. Defaults
+  // to "not required". 
   foreach (array_keys($info) as $field_type) {
-    $info[$field_type]['instance_settings']['required_for_pub'] = FALSE;
+    $info[$field_type]['instance_settings']['required_for_pub'] = REQUIRED_FOR_PUB_NOT_REQUIRED;
   }
 }
 
 /**
- * Implements hook_field_ui_field_edit_form_alter(&$form, &$form_state, $form_id).
+ * Implements hook_form_FORM_ID_alter().
  */
-function required_for_pub_form_field_ui_field_edit_form_alter(&$form, &$form_state, $form_id) {
+function required_for_pub_form_field_ui_field_edit_form_alter(&$form, &$form_state) {
+  // Hide the "Required field" checkbox. This functionality becomes
+  // part of the required_for_pub field.
+  $form['instance']['required']['#access'] = FALSE;
 
-  // omit field_collection
-  if ($form['#field']['type'] == 'field_collection') {
-    return;
-  }
-
-  $form['instance']['required']['#access'] = FALSE;  // the 'Require field' form element will be handled by the form element below -- as one of the options.
-
-  // user can now choose from 3 options: required, required_for_pub, or not required
+  // Required for publishing radios.
   $form['instance']['required_for_pub'] = array(
     '#type' => 'radios',
     '#title' => t('Required for publishing'),
@@ -45,38 +50,26 @@ function required_for_pub_form_field_ui_field_edit_form_alter(&$form, &$form_sta
     '#default_value' => empty($form['#instance']['required_for_pub']) ? NULL : $form['#instance']['required_for_pub'],
     '#weight' => -9,
     '#options' => array(
-      'not_required' => 'Not Required',
-      'required' => 'Required field',
-      'required_for_pub' => 'Required for publishing',
+      REQUIRED_FOR_PUB_NOT_REQUIRED => t('Not Required'),
+      REQUIRED_FOR_PUB_REQUIRED => t('Required field'),
+      REQUIRED_FOR_PUB_REQUIRED_FOR_PUB => t('Required for publishing'),
     ),
   );
 
-  $form['#validate'][] = '_required_for_pub_field_settings_validate';
+  // Add custom validation handler.
+  $form['#validate'][] = 'required_for_pub_validate_required_field_setting';
 }
 
 /**
- * Custom validation for the field_ui_field_edit_form
+ * Validation callback for field_ui_field_edit_form.
  */
-function _required_for_pub_field_settings_validate($form, &$form_state) {
-  // choice can be  'required' or 'required_for_pub' or 'not_required'
-  $choice = $form_state['values']['instance']['required_for_pub'];
+function required_for_pub_validate_required_field_setting($form, &$form_state) {
+  // Get selected "Required for publishing" state.
+  $required_state = $form_state['values']['instance']['required_for_pub'];
 
-  switch ($choice) {
-    case 'required':
-      $form_state['values']['instance']['required'] = 1;
-      $form_state['values']['instance']['required_for_pub'] = 'required';
-      break;
-    case 'required_for_pub':
-      $form_state['values']['instance']['required_for_pub'] = 'required_for_pub';
-      $form_state['values']['instance']['required'] = 0;
-      break;
-    case 'not_required':
-      $form_state['values']['instance']['required_for_pub'] = 'not_required';
-      $form_state['values']['instance']['required'] = 0;
-      break;
-  }
+  // Set appropriate value for the (now hidden) "Required field" option.
+  $form_state['values']['instance']['required'] = ($required_state === REQUIRED_FOR_PUB_REQUIRED);
 }
-
 
 /**
  * Implements hook_permission().
@@ -132,7 +125,7 @@ function required_for_pub_field_attach_form($entity_type, $entity, &$form, &$for
     if (empty($field_info_instances[$field_name]['required_for_pub'])) { // value can be 0 or NULL
       continue;
     }
-    if ( $field_info_instances[$field_name]['required_for_pub'] == 'required_for_pub' ) {  // create an array of fields where required_for_pub is  TRUE // TODO: no need for an if . already checked by isset 4 lines above
+    if ( $field_info_instances[$field_name]['required_for_pub'] == REQUIRED_FOR_PUB_REQUIRED_FOR_PUB) {  // create an array of fields where required_for_pub is  TRUE // TODO: no need for an if . already checked by isset 4 lines above
       $fields_required_for_pub[] = $field_name;
       $form_state['required_for_pub']['#fields'][] = $field_name;
       // add css to the div wrapping the field
@@ -290,7 +283,7 @@ function required_for_pub_fc_special_handler_form_alter(&$form, &$form_state, $f
       $fields_configured_as_req_for_pub = array();
       foreach ($fields_fc as $field_name2 => $field_arr) {
 
-        if ($field_arr['required_for_pub'] == 'required_for_pub') {
+        if ($field_arr['required_for_pub'] == REQUIRED_FOR_PUB_REQUIRED_FOR_PUB) {
           $fields_required_for_pub[] = $field_name2;
 
           $form_state['required_for_pub']['#fields'][] = $field_name2;
