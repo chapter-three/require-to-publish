@@ -9,7 +9,7 @@
  */
 
 /**
- * Implements of hook_install().
+ * Implements hook_install().
  */
 function required_for_pub_install() {
   // Set to a higher weight to allow values to be set by other modules before validation
@@ -21,7 +21,7 @@ function required_for_pub_install() {
 }
 
 /**
- * Implements of hook_uninstall().
+ * Implements hook_uninstall().
  */
 function required_for_pub_uninstall() {
   // Delete settings form varible table.
