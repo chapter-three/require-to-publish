@@ -29,6 +29,18 @@ function required_for_pub_help($path, $arg) {
 }
 
 /**
+ * Implements hook_permission().
+ */
+function required_for_pub_permission() {
+  return array(
+    'required_for_pub_save_draft' => array(
+      'title' => t('Save content as draft'),
+      'description' => t('Allows a user to save content as draft.'),
+    ),
+  );
+}
+
+/**
  * Implements hook_field_info_alter().
  */
 function required_for_pub_field_info_alter(&$info) {
@@ -74,19 +86,7 @@ function required_for_pub_validate_required_field_setting($form, &$form_state) {
   $required_state = $form_state['values']['instance']['required_for_pub'];
 
   // Set appropriate value for the (now hidden) "Required field" option.
-  $form_state['values']['instance']['required'] = ($required_state === REQUIRED_FOR_PUB_REQUIRED);
-}
-
-/**
- * Implements hook_permission().
- */
-function required_for_pub_permission() {
-  return array(
-    'required_for_pub_save_draft' => array(
-      'title' => t('Save content as draft'),
-      'description' => t('Allows a user to save content as draft.'),
-    ),
-  );
+  $form_state['values']['instance']['required'] = ($required_state == REQUIRED_FOR_PUB_REQUIRED);
 }
 
 /**
@@ -105,7 +105,7 @@ function required_for_pub_field_widget_form_alter(&$element, &$form_state, $cont
         $element['#title'] .= theme('required_for_pub_marker',  array('element' => $element));
       }
 
-      // Add an after_build callback to handle fields required on publishing.
+      // Add an element_validate callback to handle fields required on publishing.
       $element += array('#element_validate' => array());
       array_unshift($element['#element_validate'], 'required_for_pub_field_widget_element_validate');
     }
@@ -125,18 +125,13 @@ function required_for_pub_field_widget_element_validate(&$element, &$form_state)
 
   // If form is in validation limbo.
   if ($is_base_field && $form_state['process_input'] && ($form_state['triggering_element']['#name'] == REQUIRED_FOR_PUB_PUBLISH_TRIGGER)) {
-    // Set element to required. Does this have any implication at all?
-    $element['#required'] = TRUE;
-
-    $field = field_widget_field($element, $form_state);
-    $field_name = $element['#field_name'];
-
     // Get field items from form input.
-    $field_input_base = &drupal_array_get_nested_value($form_state['values'], $element['#field_parents']);
-    $field_items = $field_input_base[$field_name][$element['#language']];
+    $form_base = &drupal_array_get_nested_value($form_state['values'], $element['#field_parents']);
+    $field_items = $form_base[$element['#field_name']][$element['#language']];
     $item = reset($field_items);
 
     // Check if field is empty.
+    $field = field_widget_field($element, $form_state);
     $function = $field['module'] . '_field_is_empty';
     if (empty($item) || $function($item, $field)) {
       $instance = field_widget_instance($element, $form_state);
@@ -185,7 +180,6 @@ function required_for_pub_field_attach_form($entity_type, $entity, &$form, &$for
  * Custom validation for the entity add or edit forms
  */
 function required_for_pub_form_validate($form, &$form_state) {
-  $form['#rebuild'] = TRUE;
   $trigger = $form_state['triggering_element']['#name'];
 
   // Enforce published state depending on triggering button.
