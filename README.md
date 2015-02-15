@@ -27,5 +27,3 @@ Example use cases:
 1. A donation cannot be submitted (or published ) until the donation amount is selected from  1 of say, 3 choices ($100, $50, or $10).
 
 2. A Review on a article cannot be submitted unless a grade or rating is given (A, B, C, D , F  OR 5 stars, 4 stars or 3 stars)
-
-When no field has been configured for the entire node, the "Save as Draft" button will not display.
