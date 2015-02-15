@@ -97,23 +97,21 @@ function required_for_pub_field_widget_form_alter(&$element, &$form_state, $cont
   $required_for_pub = isset($instance['required_for_pub']) ? $instance['required_for_pub'] : FALSE;
 
   if ($required_for_pub == REQUIRED_FOR_PUB_REQUIRED_FOR_PUB) {
-    if (!user_access('required_for_pub_save_draft')) {
+    if (user_access('required_for_pub_save_draft')) {
+      // Append required on publishing markup to field label.
+      if (!empty($element['#title'])) {
+        $label = $element['#title'];
+        $element['#title'] .= theme('required_for_pub_marker',  array('element' => $element));
+      }
+
+      // Add an after_build callback to handle fields required on publishing.
+      $element += array('#element_validate' => array());
+      array_unshift($element['#element_validate'], 'required_for_pub_field_widget_element_validate');
+    }
+    else {
       // Require field if user has no access.
       $element['#required'] = TRUE;
     }
-
-    // Flag to activate module.
-    $form_state['required_for_pub'] = TRUE;
-
-    // Append required on publishing markup to field label.
-    if (!empty($element['#title'])) {
-      $label = $element['#title'];
-      $element['#title'] .= theme('required_for_pub_marker',  array('element' => $element));
-    }
-
-    // Add an after_build callback to handle fields required on publishing.
-    $element += array('#element_validate' => array());
-    array_unshift($element['#element_validate'], 'required_for_pub_field_widget_element_validate');
   }
 }
 
@@ -121,7 +119,6 @@ function required_for_pub_field_widget_form_alter(&$element, &$form_state, $cont
  * Element validate callback for "Required for publishing" fields.
  */
 function required_for_pub_field_widget_element_validate(&$element, &$form_state) {
-
   // Is field base field? Returns false for summary fields and likes.
   $is_base_field = !(isset($element['#base_type'], $element['#type']) && $element['#base_type'] != $element['#type']);
 
@@ -129,7 +126,7 @@ function required_for_pub_field_widget_element_validate(&$element, &$form_state)
   if ($is_base_field && $form_state['process_input'] && ($form_state['triggering_element']['#name'] == REQUIRED_FOR_PUB_PUBLISH_TRIGGER)) {
     // Set element to required. Does this have any implication at all?
     $element['#required'] = TRUE;
-    
+
     $field = field_widget_field($element, $form_state);
     $field_name = $element['#field_name'];
 
@@ -160,25 +157,23 @@ function required_for_pub_field_widget_element_validate(&$element, &$form_state)
  */
 function required_for_pub_field_attach_form($entity_type, $entity, &$form, &$form_state, $langcode) {
   // Only invoke module for node entities and users with permission to save drafts.
-  if (isset($form_state['required_for_pub'])) {
-    drupal_add_css(drupal_get_path('module', 'required_for_pub') . '/css/required_for_pub.css', array('group' => CSS_DEFAULT, 'every_page' => TRUE));
+  if ($entity_type != 'node' || !user_access('required_for_pub_save_draft')) {
+    return;
   }
 
   // Add a "Save as draft" action to the form.
   $form['actions']['required_for_pub_save_as_draft'] = array(
     '#type' => 'submit',
     '#access' => TRUE,
-    '#value' => 'Save as draft',
+    '#value' => t('Save as draft'),
     '#name' => REQUIRED_FOR_PUB_DRAFT_TRIGGER,
     '#weight' => 4,
-    '#submit' => array(
-      0 => 'node_form_submit',
-    ),
+    '#submit' => array('node_form_submit'),
   );
 
   // Change save button text to "Publish", add value for validation
   // condition.
-  $form['actions']['submit']['#value'] = 'Publish';
+  $form['actions']['submit']['#value'] = t('Publish');
   $form['actions']['submit']['#name'] = REQUIRED_FOR_PUB_PUBLISH_TRIGGER;
 
   // Add validation callback.
