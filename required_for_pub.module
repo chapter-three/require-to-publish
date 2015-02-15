@@ -106,30 +106,41 @@ function required_for_pub_field_widget_form_alter(&$element, &$form_state, $cont
     $form_state['required_for_pub'] = TRUE;
 
     // Add an after_build callback to handle fields required on publishing.
-    $element['#after_build'][] = 'required_for_pub_field_widget_after_build';
+    $element += array('#element_validate' => array());
+    array_unshift($element['#element_validate'], 'required_for_pub_field_widget_element_validate');
   }
 }
 
 /**
- * After-build callback for "Required for publishing" fields.
+ * Element validate callback for "Required for publishing" fields.
  */
-function required_for_pub_field_widget_after_build(&$element, &$form_state) {
+function required_for_pub_field_widget_element_validate(&$element, &$form_state) {
+
+  // Is field base field? Returns false for summary fields and likes.
+  $is_base_field = !(isset($element['#base_type'], $element['#type']) && $element['#base_type'] != $element['#type']);
+
   // If form is in validation limbo.
-  if ($form_state['process_input'] && $form_state['triggering_element']['#name'] == REQUIRED_FOR_PUB_PUBLISH_TRIGGER) {
-    // Blatantly stolen from field_collection module.
-    // @see field_collection_field_widget_embed_validate()
-    if (isset($element['#needs_validation'])) {
-      $is_empty_multiple = (!count($element['#value']));
-      $is_empty_string = (is_string($element['#value']) && drupal_strlen(trim($element['#value'])) == 0);
-      $is_empty_value = ($element['#value'] === 0);
-      $is_empty_option = (isset($element['#options']['_none']) && $element['#value'] == '_none');
-      if ($is_empty_multiple || $is_empty_string || $is_empty_value || $is_empty_option) {
-        if (isset($element['#title'])) {
-          form_error($element, t('@name field is required before publishing.', array('@name' => $element['#title'])));
-        }
-        else {
-          form_error($element);
-        }
+  if ($is_base_field && $form_state['process_input'] && ($form_state['triggering_element']['#name'] == REQUIRED_FOR_PUB_PUBLISH_TRIGGER)) {
+    // Set element to required. Does this have any implication at all?
+    $element['#required'] = TRUE;
+    
+    $field = field_widget_field($element, $form_state);
+    $field_name = $element['#field_name'];
+
+    // Get field items from form input.
+    $field_input_base = &drupal_array_get_nested_value($form_state['values'], $element['#field_parents']);
+    $field_items = $field_input_base[$field_name][$element['#language']];
+    $item = reset($field_items);
+
+    $function = $field['module'] . '_field_is_empty';
+    if (empty($item) || $function($item, $field)) {
+      $instance = field_widget_instance($element, $form_state);
+      $label = !empty($element['#title']) ? $element['#title'] : $instance['label'];
+      if (!empty($label)) {
+        form_error($element, t('@label is required before publishing.', array('@label' =>$label)));
+      }
+      else {
+        form_error($element);
       }
     }
   }
@@ -170,6 +181,7 @@ function required_for_pub_field_attach_form($entity_type, $entity, &$form, &$for
  * Custom validation for the entity add or edit forms
  */
 function required_for_pub_form_validate($form, &$form_state) {
+  $form['#rebuild'] = TRUE;
   $trigger = $form_state['triggering_element']['#name'];
 
   // Enforce published state depending on triggering button.
@@ -181,53 +193,5 @@ function required_for_pub_form_validate($form, &$form_state) {
     case REQUIRED_FOR_PUB_PUBLISH_TRIGGER:
       $form_state['values']['status'] = TRUE;
       break;
-  }
-}
-
-/**
- * special handler for fields of type "field collection"
- * For now: support is only for field collection fields up tp 1 level deep.
- * TODO: support for unlimited nesting of fields of type "field collection"
- */
-function required_for_pub_fc_special_handler_form_alter(&$form, &$form_state, $field_name_fc = NULL, $field_tree = NULL) {
-  $form['#rebuild'] = TRUE;
-  $lang = $form[$field_name_fc]['#language'];
-  $items = $form[$field_name_fc][$lang];
-
-      $fields_fc = field_info_instances('field_collection_item', $field_name_fc);
-
-      $form_state['required_for_pub']['#fields_instances'][] = $fields_fc;
-      $fields_configured_as_req_for_pub = array();
-      foreach ($fields_fc as $field_name2 => $field_arr) {
-
-        if ($field_arr['required_for_pub'] == REQUIRED_FOR_PUB_REQUIRED_FOR_PUB) {
-          $fields_required_for_pub[] = $field_name2;
-
-          $form_state['required_for_pub']['#fields'][] = $field_name2;
-          $fields_configured_as_req_for_pub[$field_name2] = $field_name2;
-        }
-      }
-
-  $elements = element_children($items);
-  foreach ($elements as $key => $item) {
-
-    foreach (element_children($items[$key]) as $key2 => $field_name_fc2) {
-      // if the field is not configured to be "required for pub", ignore
-      if (!array_key_exists($field_name_fc2, $fields_configured_as_req_for_pub)) {
-        continue;
-      }
-
-      $form_element = $items[$key][$field_name_fc2][$lang][0];
-
-      $title = $form_element['#title'];
-
-      if (empty($items[$key][$field_name_fc2][$lang][0]['value']) ) {
-        $form[$field_name_fc][$lang][$key][$field_name_fc2][$lang][0]['#title'] = $title . '<div><span class="required-for-pub">*Required for content to be published.</span></div>';
-      }
-      else {
-        $form[$field_name_fc][$lang][$key][$field_name_fc2][$lang][0]['value']['#title'] = $title . '<div><span class="required-for-pub">*Required for content to be published.</span></div>';
-      }
-      $form[$field_name_fc][$lang][$key][$field_name_fc2][$lang][0]['value']['#attributes']['class'][] = 'required-for-pub';
-    }
   }
 }
