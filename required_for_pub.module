@@ -105,6 +105,12 @@ function required_for_pub_field_widget_form_alter(&$element, &$form_state, $cont
     // Flag to activate module.
     $form_state['required_for_pub'] = TRUE;
 
+    // Append required on publishing markup to field label.
+    if (!empty($element['#title'])) {
+      $label = $element['#title'];
+      $element['#title'] .= theme('required_for_pub_marker',  array('element' => $element));
+    }
+
     // Add an after_build callback to handle fields required on publishing.
     $element += array('#element_validate' => array());
     array_unshift($element['#element_validate'], 'required_for_pub_field_widget_element_validate');
@@ -132,10 +138,12 @@ function required_for_pub_field_widget_element_validate(&$element, &$form_state)
     $field_items = $field_input_base[$field_name][$element['#language']];
     $item = reset($field_items);
 
+    // Check if field is empty.
     $function = $field['module'] . '_field_is_empty';
     if (empty($item) || $function($item, $field)) {
       $instance = field_widget_instance($element, $form_state);
       $label = !empty($element['#title']) ? $element['#title'] : $instance['label'];
+
       if (!empty($label)) {
         form_error($element, t('@label is required before publishing.', array('@label' =>$label)));
       }
@@ -194,4 +202,31 @@ function required_for_pub_form_validate($form, &$form_state) {
       $form_state['values']['status'] = TRUE;
       break;
   }
+}
+
+/**
+ * Implements hook_theme().
+ */
+function required_for_pub_theme() {
+  return array(
+    'required_for_pub_marker' => array(
+      'variables' => array('element' => NULL),
+    ),
+  );
+}
+
+/**
+ * Returns HTML appended to field labels for required_for_pub elements.
+ *
+ * @param $variables
+ *   An associative array containing:
+ *   - element: An associative array containing the properties of the element.
+ *
+ */
+function theme_required_for_pub_marker($variables) {
+  $attributes = array(
+    'class' => 'form-required form-required-for-pub',
+    'title' => t('This field is required for publishing.'),
+  );
+  return '<span' . drupal_attributes($attributes) . '>**</span>';
 }
