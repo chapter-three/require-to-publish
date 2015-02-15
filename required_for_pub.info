@@ -1,4 +1,3 @@
 name = Required for Publishing
 description = Allows node add/edit forms to be "saved as draft" or "published." Fields can be configured to be required before content can be published.
 core = 7.x
-;configure = admin/config/content/validation
