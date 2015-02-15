@@ -101,6 +101,7 @@ function required_for_pub_field_widget_form_alter(&$element, &$form_state, $cont
       // Append required on publishing markup to field label.
       if (!empty($element['#title'])) {
         $label = $element['#title'];
+        $element['#original_title'] = $element['#title'];
         $element['#title'] .= theme('required_for_pub_marker',  array('element' => $element));
       }
 
@@ -139,7 +140,7 @@ function required_for_pub_field_widget_element_validate(&$element, &$form_state)
     $function = $field['module'] . '_field_is_empty';
     if (empty($item) || $function($item, $field)) {
       $instance = field_widget_instance($element, $form_state);
-      $label = !empty($element['#title']) ? $element['#title'] : $instance['label'];
+      $label = !empty($element['#original_title']) ? $element['#original_title'] : $instance['label'];
 
       if (!empty($label)) {
         form_error($element, t('@label is required before publishing.', array('@label' => $label)));
