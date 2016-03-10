@@ -212,8 +212,7 @@ function required_for_pub_form_validate($form, &$form_state) {
 
     foreach ($empty_fields as $key => $field_name) {
       $label = $form_state['required_for_pub']['#fields_instances'][$field_name]['label'];
-      form_set_error($field_name, t('%digit. %field_name', array('%field_name' => $label, '%digit' => $digit)));
-      $digit = $digit + 1;
+      form_set_error($field_name, t('%field_name field is required to publish.', array('%field_name' => $label)));
     }
     return FALSE;
   }
