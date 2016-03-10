@@ -188,58 +188,18 @@ function required_for_pub_form_validate($form, &$form_state) {
     return TRUE;
   }
 
-  $status = $form_state['values']['status'];
-  $lang = $form_state['values']['language'];  
+  $lang = $form_state['values']['language'];
   $empty_fields = array();
   
-  foreach ($form_state['required_for_pub']['#fields'] as $key => $field_name) {
-    if (empty($form_state['values'][$field_name][$lang][0])) {
-      $item = $form_state['values'][$field_name][$lang];  // some fields do not use any delta or the 0 offset. example: term reference does not use the 0 offset when the field is empty
-    }
-    else { 
-      $item =  $form_state['values'][$field_name][$lang][0];
-    }  
-    // get the field info. Do not use field_get_fields -- it will harder to traverse the array for those fields nested in field collection
-    $field = field_info_field($field_name);
-
-    // get the module that defined the hook_field_is_empty
-    $module = $field['module'];
-    
-    // get the field type
-    $field_type = $field['type'];
-    
-    // get the function name which is in this format: called module_field_is_empty(), where module is the module that defined the field
-    $func = $module . '_field_is_empty';
-    
-    // special handling for booleans
-    // NOTE: the list.module's hook_field_is_empty specifies this: 
-    // if (empty($item['value']) && (string) $item['value'] !== '0') { return TRUE; }
-    // paramter $item passed is array('value' => 0) -- if user has not clicked the wdiget form
-    // which means that the boolean field will always return hook_field_is_empty to be FALSE -- that is, the field contains data. when in fact, it should be treated as EMPTY.
-    // hence, we convert the value from 0 to NULL or set $item to NULL
-    if ($field_type == 'list_boolean') {
-      if ($item['value'] == 0) {
-        $item = NULL;
-      }
-    }
-    
-    // special handling for fields that do no use delta or the 0 offset.
-    if (empty($item)) {
-      $field_is_empty = TRUE;
-    }
-    else { 
-      $field_is_empty = call_user_func($func, $item, $field);
-    }
-    
-    // TO CHECK if field is empty -- this will account for all field types
-    if ($field_is_empty) {
+  foreach ($form_state['required_for_pub']['#fields'] as $field_name) {
+    if (_required_for_pub_field_is_empty($form_State, $field_name, $lang)) {
       $empty_fields[] = $field_name;
     }
   }
   
   // the most important validation
   $digit = 1;
-  if ($status == 1 && !empty($empty_fields) ) {
+  if (!empty($empty_fields) ) {
     // The form is cached. Hence, the css file must be loaded again in the
     // validate function or the css won't work.
     drupal_add_css(drupal_get_path('module', 'required_for_pub') . '/css/required_for_pub.css', array('group' => CSS_DEFAULT, 'every_page' => TRUE));
@@ -260,10 +220,45 @@ function required_for_pub_form_validate($form, &$form_state) {
   else {
     return TRUE;
   }
-  return FALSE;
 }
 
+/**
+ * Check if a field is empty.
+ * @param $form_state - The current form_state in which to check field presence.
+ * @param $field_name - The machine name of the field to check for.
+ * @param $lang - The language to check in.
+ * @return bool - TRUE is the field is empty.
+ */
+function _required_for_pub_field_is_empty($form_state, $field_name, $lang) {
+  if (empty($form_state['values'][$field_name][$lang][0])) {
+    // Some fields do not use any delta or the 0 offset. Example: term
+    // reference does not use the 0 offset when the field is empty.
+    $item = $form_state['values'][$field_name][$lang];
+  }
+  else {
+    $item =  $form_state['values'][$field_name][$lang][0];
+  }
+  $field = field_info_field($field_name);
+  $module = $field['module'];
+  $field_type = $field['type'];
+  $func = $module . '_field_is_empty';
 
+  // special handling for booleans
+  if ($field_type == 'list_boolean') {
+    if ($item['value'] == 0) {
+      $item = NULL;
+    }
+  }
+
+  // special handling for fields that do no use delta or the 0 offset.
+  if (empty($item)) {
+    $field_is_empty = TRUE;
+  }
+  else {
+    $field_is_empty = call_user_func($func, $item, $field);
+  }
+  return $field_is_empty;
+}
 
 /**
  * Special handler for fields of type "field collection."
