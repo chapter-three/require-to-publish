@@ -182,7 +182,7 @@ function required_for_pub_form_validate($form, &$form_state) {
       $form_state['values']['status'] = 1;
       break;      
   }
-      
+
   // if there are no fields that have been configured as required for publish
   if (empty($form_state['required_for_pub']['#fields'])) {
     return TRUE;
@@ -192,7 +192,7 @@ function required_for_pub_form_validate($form, &$form_state) {
   $empty_fields = array();
   
   foreach ($form_state['required_for_pub']['#fields'] as $field_name) {
-    if (_required_for_pub_field_is_empty($form_State, $field_name, $lang)) {
+    if (_required_for_pub_field_is_empty($form_state, $field_name, $lang)) {
       $empty_fields[] = $field_name;
     }
   }
@@ -230,9 +230,9 @@ function required_for_pub_form_validate($form, &$form_state) {
  * @return bool - TRUE is the field is empty.
  */
 function _required_for_pub_field_is_empty($form_state, $field_name, $lang) {
+  // Some fields do not use any delta or the 0 offset. Example: term
+  // reference does not use the 0 offset when the field is empty.
   if (empty($form_state['values'][$field_name][$lang][0])) {
-    // Some fields do not use any delta or the 0 offset. Example: term
-    // reference does not use the 0 offset when the field is empty.
     $item = $form_state['values'][$field_name][$lang];
   }
   else {
