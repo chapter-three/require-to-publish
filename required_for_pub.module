@@ -173,14 +173,13 @@ function required_for_pub_form_validate($form, &$form_state) {
   drupal_add_css(drupal_get_path('module', 'required_for_pub') . '/css/required_for_pub.css', array('group' => CSS_DEFAULT));
 
   $trigger = $form_state['triggering_element']['#name'];
-  switch ($trigger) { 
+  switch ($trigger) {
     case 'required_for_pub_save_as_draft':
       $form_state['values']['status'] = 0;
-      return TRUE;
-      break;  
+      break;
     case 'drupal_core_save':
       $form_state['values']['status'] = 1;
-      break;      
+      break;
   }
 
   // if there are no fields that have been configured as required for publish
