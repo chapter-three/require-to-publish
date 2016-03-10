@@ -17,9 +17,9 @@ function required_for_pub_field_info_alter(&$info) {
   // Add a setting to all field types.
   foreach ($info as $field_type => &$field_type_info) {
   $field_type_info += array('instance_settings' => array());
-	$field_type_info['instance_settings'] += array(
-    'required_for_pub' => false,
-  );
+    $field_type_info['instance_settings'] += array(
+      'required_for_pub' => FALSE,
+    );
   }
 }
 
@@ -95,15 +95,15 @@ function required_for_pub_permission() {
  */
 function required_for_pub_field_attach_form($entity_type, $entity, &$form, &$form_state, $langcode = NULL, $options = array()) {
 
-  // Three scenarios when this
+  // Two scenarios to end this function:
+  //  1) The user doesn't have required_for_pub_save_draft permission.
+  //  2) The entity is not a node
   if (!user_access('required_for_pub_save_draft') ||
-      $entity_type != 'node' ||
-      $entity_type == 'field_collection_item'
-  ) {
+      $entity_type != 'node') {
     return;
   }
   
-  $form['#tree'] = false;  
+  $form['#tree'] = FALSE;
   drupal_add_css(drupal_get_path('module', 'required_for_pub') . '/css/required_for_pub.css', array('group' => CSS_DEFAULT, 'every_page' => TRUE));
   $form['#validate'][] = 'required_for_pub_form_validate';
   
@@ -151,11 +151,11 @@ function required_for_pub_field_attach_form($entity_type, $entity, &$form, &$for
   if ($entity_type == 'node' && !module_exists('save_draft') && !empty($fields_required_for_pub)) {
     $form['actions']['required_for_pub_save_as_draft'] = array(
       '#type' => 'submit',
-      '#access' => true,
+      '#access' => TRUE,
       '#default_value' => 'Save as draft',
       '#name' => 'required_for_pub_save_as_draft',
       '#weight' => 4,
-      '#submit' => array (
+      '#submit' => array(
         0 => 'node_form_submit',
       ),
     );
@@ -209,7 +209,7 @@ function required_for_pub_form_validate($form, &$form_state) {
     $field_type = $field['type'];
     
     // get the function name which is in this format: called module_field_is_empty(), where module is the module that defined the field
-    $func = $module.'_field_is_empty';
+    $func = $module . '_field_is_empty';
     
     // special handling for booleans
     // NOTE: the list.module's hook_field_is_empty specifies this: 
@@ -299,10 +299,10 @@ function required_for_pub_fc_special_handler_form_alter(&$form, &$form_state, $f
       $form_element = $items[$key][$field_name_fc2][$lang][0];
       $title = $form_element['#title'];
       if (empty($items[$key][$field_name_fc2][$lang][0]['value']) ) {
-        $form[$field_name_fc][$lang][$key][$field_name_fc2][$lang][0]['#title'] = $title.'<div><span class="required-for-pub">*Required for content to be published.</span></div>';
+        $form[$field_name_fc][$lang][$key][$field_name_fc2][$lang][0]['#title'] = $title . '<div><span class="required-for-pub">*Required for content to be published.</span></div>';
       }
       else {
-        $form[$field_name_fc][$lang][$key][$field_name_fc2][$lang][0]['value']['#title'] = $title.'<div><span class="required-for-pub">*Required for content to be published.</span></div>';
+        $form[$field_name_fc][$lang][$key][$field_name_fc2][$lang][0]['value']['#title'] = $title . '<div><span class="required-for-pub">*Required for content to be published.</span></div>';
       }
       $form[$field_name_fc][$lang][$key][$field_name_fc2][$lang][0]['value']['#attributes']['class'][] = 'required-for-pub'; 
     }
