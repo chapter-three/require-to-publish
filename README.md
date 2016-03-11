@@ -1,4 +1,4 @@
-# Require-to-publish
+# Required for Publishing
 
 A Drupal module which allows required fields to remain empty as long as the node is unpublished. Also, it creates a "Save as Draft" button.
 
