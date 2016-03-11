@@ -5,7 +5,7 @@ span.required-for-pub {
 
 .required-for-pub .form-item label:after {
   content: '*';
-  color: #AAA;
+  color: #F00;
   font-weight: normal;
 }
 
