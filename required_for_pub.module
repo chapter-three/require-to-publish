@@ -217,9 +217,7 @@ function required_for_pub_form_validate($form, &$form_state) {
     }
     return FALSE;
   }
-  else {
-    return TRUE;
-  }
+  return TRUE;
 }
 
 /**
