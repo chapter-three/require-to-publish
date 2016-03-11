@@ -7,7 +7,7 @@ There is a D6 module which does this already: https://drupal.org/project/require
 This module does more than just create a "Save as Draft" button. 
 
 It allows any field to be configured as "required for content to be published." When entering data on the node add or edit 
-form, users will see "*Required for content to be published" right below the field label.
+form, users will see a red asterisk next to the field label, just like with required fields.
 
 Moreover, when a user tries to publish the content without entering data for fields that are "required for content to be published",
 2 things are triggered: 
