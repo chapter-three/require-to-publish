@@ -4,7 +4,7 @@
  * @file
  * Installs the required_for_pub module.
  *
- * Sets the weight the require_for_pub module to 1 in the system module list so that
+ * Sets the weight of the require_for_pub module to 1 in the system module list so that
  * other modules will execute first by default.
  */
 
