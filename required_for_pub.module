@@ -195,27 +195,29 @@ function required_for_pub_form_validate($form, &$form_state) {
       $empty_fields[] = $field_name;
     }
   }
-  
-  // the most important validation
-  $digit = 1;
-  if (!empty($empty_fields) ) {
-    // The form is cached. Hence, the css file must be loaded again in the
-    // validate function or the css won't work.
-    drupal_add_css(drupal_get_path('module', 'required_for_pub') . '/css/required_for_pub.css', array('group' => CSS_DEFAULT, 'every_page' => TRUE));
-    if (module_exists('save_draft')) {
-      form_set_error('required_for_pub', t('You must do "a" or "b": <p>a. Save this content as DRAFT</p> <p>b. Or PULBISH it but FILL UP "required fields for content to be published" listed below:</p>'));       
-    }
-    else {
-      form_set_error('required_for_pub', t('You must do "a" or "b": <p>a. Save this content as DRAFT.</p> <p>b. Or PUBLISH it but FILL UP the "required fields for content to be published" listed below:</p>'));
-    }
 
+  // the most important validation
+  if ($status == 1 && !empty($empty_fields) ) {
+    // the form is cached. Hence, the css file must be loaded again in the validate function  or  the css wonk work.
+    drupal_add_css(drupal_get_path('module', 'required_for_pub') . '/css/required_for_pub.css', array('group' => CSS_DEFAULT, 'every_page' => TRUE));
+    form_set_error('required_for_pub', t('You must complete all required fields before publishing.'));
     foreach ($empty_fields as $key => $field_name) {
       $label = $form_state['required_for_pub']['#fields_instances'][$field_name]['label'];
       form_set_error($field_name, t('%field_name field is required to publish.', array('%field_name' => $label)));
     }
     return FALSE;
   }
-  return TRUE;
+  else {
+    // Set Drupal warnings if fields would have triggered an error.
+    if (!empty($empty_fields)) {
+      drupal_set_message(t("Your progress has been saved. However you must complete all required fields before publishing."), 'warning');
+      foreach ($empty_fields as $key => $field_name) {
+        $label = $form_state['required_for_pub']['#fields_instances'][$field_name]['label'];
+        drupal_set_message(t('%field_name field is required to publish.', array('%field_name' => $label)), 'warning');
+      }
+    }
+    return TRUE;
+  }
 }
 
 /**
