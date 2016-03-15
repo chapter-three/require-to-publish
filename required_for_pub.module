@@ -198,9 +198,8 @@ function required_for_pub_form_validate($form, &$form_state) {
 
   // the most important validation
   if ($form_state['values']['status'] == 1 && !empty($empty_fields) ) {
-    // the form is cached. Hence, the css file must be loaded again in the validate function  or  the css wonk work.
+    // the form is cached. Hence, the css file must be loaded again in the validate function or the css won't work.
     drupal_add_css(drupal_get_path('module', 'required_for_pub') . '/css/required_for_pub.css', array('group' => CSS_DEFAULT, 'every_page' => TRUE));
-    form_set_error('required_for_pub', t('You must complete all required fields before publishing.'));
     foreach ($empty_fields as $key => $field_name) {
       $label = $form_state['required_for_pub']['#fields_instances'][$field_name]['label'];
       form_set_error($field_name, t('%field_name field is required to publish.', array('%field_name' => $label)));
@@ -208,14 +207,6 @@ function required_for_pub_form_validate($form, &$form_state) {
     return FALSE;
   }
   else {
-    // Set Drupal warnings if fields would have triggered an error.
-    if (!empty($empty_fields)) {
-      drupal_set_message(t("Your progress has been saved. However you must complete all required fields before publishing."), 'warning');
-      foreach ($empty_fields as $key => $field_name) {
-        $label = $form_state['required_for_pub']['#fields_instances'][$field_name]['label'];
-        drupal_set_message(t('%field_name field is required to publish.', array('%field_name' => $label)), 'warning');
-      }
-    }
     return TRUE;
   }
 }
