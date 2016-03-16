@@ -202,7 +202,7 @@ function required_for_pub_form_validate($form, &$form_state) {
     drupal_add_css(drupal_get_path('module', 'required_for_pub') . '/css/required_for_pub.css', array('group' => CSS_DEFAULT, 'every_page' => TRUE));
     foreach ($empty_fields as $key => $field_name) {
       $label = $form_state['required_for_pub']['#fields_instances'][$field_name]['label'];
-      form_set_error($field_name, t('%field_name field is required to publish.', array('%field_name' => $label)));
+      form_set_error($field_name, t('%field_name is required to publish.', array('%field_name' => $label)));
     }
     return FALSE;
   }
