@@ -165,7 +165,6 @@ function required_for_pub_field_attach_form($entity_type, $entity, &$form, &$for
   }
 }
 
-
 /**
  * Custom validation for the node add or edit forms
  */
@@ -208,7 +207,6 @@ function required_for_pub_form_validate($form, &$form_state) {
       }
     }
   }
-
 
   // the most important validation
   if ($form_state['values']['status'] == 1 && !empty($empty_fields) ) {
@@ -285,10 +283,8 @@ function required_for_pub_fc_special_handler_form_alter(&$form, &$form_state, $f
   $form_state['required_for_pub']['#fields_instances'][] = $fields_fc;
   $fields_configured_as_req_for_pub = array();
   foreach ($fields_fc as $field_name2 => $field_arr) {
-
     if (isset($field_arr['required_for_pub']) && $field_arr['required_for_pub'] == 'required_for_pub') {
       $fields_required_for_pub[] = $field_name2;
-
       $form_state['required_for_pub_fc']['#fields'][$field_name_fc][] = $field_name2;
       $fields_configured_as_req_for_pub[$field_name2] = $field_name2;
     }
