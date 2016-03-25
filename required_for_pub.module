@@ -122,7 +122,7 @@ function required_for_pub_field_attach_form($entity_type, $entity, &$form, &$for
     $field_info = field_info_field($field_name);
     if ($field_info['type'] == 'field_collection') {
       // we are on a field collection item so call this function to handle it
-      required_for_pub_fc_special_handler_form_alter($form, $form_state, $field_name); 
+      required_for_pub_fc_special_handler_form_alter($form, $form_state, $field_name);
     }
     if (empty($field_info_instances[$field_name]['required_for_pub'])) { // value can be 0 or NULL  
       continue;
@@ -191,10 +191,25 @@ function required_for_pub_form_validate($form, &$form_state) {
   $empty_fields = array();
   
   foreach ($form_state['required_for_pub']['#fields'] as $field_name) {
-    if (_required_for_pub_field_is_empty($form_state, $field_name, $lang)) {
+    if (_required_for_pub_field_is_empty($form_state['values'], $field_name, $lang)) {
       $empty_fields[] = $field_name;
     }
   }
+  foreach ($form_state['required_for_pub_fc']['#fields'] as $fc_name => $fc_fields) {
+    // Field collection languages are often (always?) stored as 'und'.
+    $fc_lang = isset($form_state['values'][$fc_name][$lang]) ? $lang : 'und';
+    foreach(array_keys($form_state['values'][$fc_name][$fc_lang]) as $delta) {
+      if (is_numeric($delta)) {
+        foreach ($fc_fields as $field_name) {
+
+          if (_required_for_pub_field_is_empty($form_state['values'][$fc_name][$fc_lang][$delta], $field_name, $fc_lang)) {
+            $empty_fields[] = $field_name;
+          }
+        }
+      }
+    }
+  }
+
 
   // the most important validation
   if ($form_state['values']['status'] == 1 && !empty($empty_fields) ) {
@@ -218,14 +233,22 @@ function required_for_pub_form_validate($form, &$form_state) {
  * @param $lang - The language to check in.
  * @return bool - TRUE is the field is empty.
  */
-function _required_for_pub_field_is_empty($form_state, $field_name, $lang) {
+function _required_for_pub_field_is_empty($form_state_values, $field_name, $lang) {
   // Some fields do not use any delta or the 0 offset. Example: term
   // reference does not use the 0 offset when the field is empty.
-  if (empty($form_state['values'][$field_name][$lang][0])) {
-    $item = $form_state['values'][$field_name][$lang];
+
+  if (!isset($form_state_values[$field_name])) {
+    return TRUE;
+  }
+  elseif (!isset($form_state_values[$field_name][$lang])) {
+    // certain fields like numbers aren't translated.
+    $item = $form_state_values[$field_name]['und'][0];
+  }
+  elseif (!isset($form_state_values[$field_name][$lang][0])) {
+    $item = $form_state_values[$field_name][$lang];
   }
   else {
-    $item =  $form_state['values'][$field_name][$lang][0];
+    $item =  $form_state_values[$field_name][$lang][0];
   }
   $field = field_info_field($field_name);
   $module = $field['module'];
@@ -260,35 +283,35 @@ function required_for_pub_fc_special_handler_form_alter(&$form, &$form_state, $f
   $items = $form[$field_name_fc][$lang];
   
   $fields_fc = field_info_instances('field_collection_item', $field_name_fc);
-
   $form_state['required_for_pub']['#fields_instances'][] = $fields_fc;
   $fields_configured_as_req_for_pub = array();
   foreach ($fields_fc as $field_name2 => $field_arr) {
 
-    if ($field_arr['required_for_pub'] == 'required_for_pub') {
+    if (isset($field_arr['required_for_pub']) && $field_arr['required_for_pub'] == 'required_for_pub') {
       $fields_required_for_pub[] = $field_name2;
 
-      $form_state['required_for_pub']['#fields'][] = $field_name2;
+      $form_state['required_for_pub_fc']['#fields'][$field_name_fc][] = $field_name2;
       $fields_configured_as_req_for_pub[$field_name2] = $field_name2;
     }
   }
-  
+
   $elements = element_children($items);
   foreach ($elements as $key => $item) {
-    foreach (element_children($items[$key]) as $key2 => $field_name_fc2) {
-      // if the field is not configured to be "required for pub", ignore
-      if (!array_key_exists($field_name_fc2, $fields_configured_as_req_for_pub)) {
-        continue;
+    if (isset($items[$key]) && is_array($items[$key])) {
+      foreach (element_children($items[$key]) as $key2 => $field_name_fc2) {
+        // if the field is not configured to be "required for pub", ignore
+        if (!array_key_exists($field_name_fc2, $fields_configured_as_req_for_pub)) {
+          continue;
+        }
+        if (empty($items[$key][$field_name_fc2][$lang][0])) {
+          $form[$field_name_fc][$lang][$key][$field_name_fc2][$lang]['#title'] .= '<div><span class="required-for-pub">*</span></div>';
+          $form[$field_name_fc][$lang][$key][$field_name_fc2][$lang]['#attributes']['class'][] = 'required-for-pub';
+        }
+        else {
+          $form[$field_name_fc][$lang][$key][$field_name_fc2][$lang][0]['value']['#title'] .= '<div><span class="required-for-pub">*</span></div>';
+          $form[$field_name_fc][$lang][$key][$field_name_fc2][$lang][0]['value']['#attributes']['class'][] = 'required-for-pub';
+        }
       }
-      $form_element = $items[$key][$field_name_fc2][$lang][0];
-      $title = $form_element['#title'];
-      if (empty($items[$key][$field_name_fc2][$lang][0]['value']) ) {
-        $form[$field_name_fc][$lang][$key][$field_name_fc2][$lang][0]['#title'] = $title . '<div><span class="required-for-pub">*Required for content to be published.</span></div>';
-      }
-      else {
-        $form[$field_name_fc][$lang][$key][$field_name_fc2][$lang][0]['value']['#title'] = $title . '<div><span class="required-for-pub">*Required for content to be published.</span></div>';
-      }
-      $form[$field_name_fc][$lang][$key][$field_name_fc2][$lang][0]['value']['#attributes']['class'][] = 'required-for-pub'; 
     }
   }
 }
