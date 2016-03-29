@@ -189,19 +189,23 @@ function required_for_pub_form_validate($form, &$form_state) {
   $lang = $form_state['values']['language'];
   $empty_fields = array();
   
-  foreach ($form_state['required_for_pub']['#fields'] as $field_name) {
-    if (_required_for_pub_field_is_empty($form_state['values'], $field_name, $lang)) {
-      $empty_fields[] = $field_name;
+  if (!empty($form_state['required_for_pub'])) {
+    foreach ($form_state['required_for_pub']['#fields'] as $field_name) {
+      if (_required_for_pub_field_is_empty($form_state['values'], $field_name, $lang)) {
+        $empty_fields[] = $field_name;
+      }
     }
   }
-  foreach ($form_state['required_for_pub_fc']['#fields'] as $fc_name => $fc_fields) {
-    // Field collection languages are often (always?) stored as 'und'.
-    $fc_lang = isset($form_state['values'][$fc_name][$lang]) ? $lang : 'und';
-    foreach (array_keys($form_state['values'][$fc_name][$fc_lang]) as $delta) {
-      if (is_numeric($delta)) {
-        foreach ($fc_fields as $field_name) {
-          if (_required_for_pub_field_is_empty($form_state['values'][$fc_name][$fc_lang][$delta], $field_name, $fc_lang)) {
-            $empty_fields[] = $field_name;
+  if (!empty($form_state['required_for_pub_fc'])) {
+    foreach ($form_state['required_for_pub_fc']['#fields'] as $fc_name => $fc_fields) {
+      // Field collection languages are often (always?) stored as 'und'.
+      $fc_lang = isset($form_state['values'][$fc_name][$lang]) ? $lang : 'und';
+      foreach (array_keys($form_state['values'][$fc_name][$fc_lang]) as $delta) {
+        if (is_numeric($delta)) {
+          foreach ($fc_fields as $field_name) {
+            if (_required_for_pub_field_is_empty($form_state['values'][$fc_name][$fc_lang][$delta], $field_name, $fc_lang)) {
+              $empty_fields[] = $field_name;
+            }
           }
         }
       }
