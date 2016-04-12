@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Implements of hook_help().
+ * Implements hook_help().
  */
 function required_for_pub_help($path, $arg) {
   switch ($path) {
@@ -17,16 +17,16 @@ function required_for_pub_field_info_alter(&$info) {
   // Add a setting to all field types.
   foreach ($info as $field_type => &$field_type_info) {
   $field_type_info += array('instance_settings' => array());
-	$field_type_info['instance_settings'] += array(
-      'required_for_pub' => false,
+    $field_type_info['instance_settings'] += array(
+      'required_for_pub' => FALSE,
     );
   }
 }
 
 /**
- * Implements hook_field_ui_field_edit_form_alter(&$form, &$form_state, $form_id).
+ * Implements hook_field_ui_field_edit_form_alter(&$form, &$form_state).
  */
-function required_for_pub_form_field_ui_field_edit_form_alter(&$form, &$form_state, $form_id) {
+function required_for_pub_form_field_ui_field_edit_form_alter(&$form, &$form_state) {
   
   // omit field_collection 
   if ($form['#field']['type'] == 'field_collection') {
@@ -53,7 +53,7 @@ function required_for_pub_form_field_ui_field_edit_form_alter(&$form, &$form_sta
 }
 
 /**
- * Custom validation for the field_ui_field_edit_form
+ * Custom validation for the field_ui_field_edit_form.
  */
 function _required_for_pub_field_settings_validate($form, &$form_state) {
 
@@ -91,35 +91,30 @@ function required_for_pub_permission() {
 }
 
 /**
- * Implements hook_field_attach_form()
+ * Implements hook_field_attach_form().
  */
 function required_for_pub_field_attach_form($entity_type, $entity, &$form, &$form_state, $langcode = NULL, $options = array()) {
 
-  if (!user_access('required_for_pub_save_draft')) {
+  // Two scenarios to end this function:
+  //  1) The user doesn't have required_for_pub_save_draft permission.
+  //  2) The entity is not a node
+  if (!user_access('required_for_pub_save_draft') ||
+      $entity_type != 'node') {
     return;
   }
   
-  $form['#tree'] = false;  
+  $form['#tree'] = FALSE;
   drupal_add_css(drupal_get_path('module', 'required_for_pub') . '/css/required_for_pub.css', array('group' => CSS_DEFAULT, 'every_page' => TRUE));
   $form['#validate'][] = 'required_for_pub_form_validate';
   
   // get all fields in the node form_state
   $fields = $form_state['field'];
-  
-  if ($entity_type == 'field_collection_item') {
-    return;  // field collection items trigger for the hook_field_attach_form  to be called again. so need need to process it again.
-  }
-  
-  if ($entity_type != 'node')  {
-    return;
-  }
+
   $form_state['required_for_pub']['#fields_instances'] = array();
 
-  if ($entity_type == 'node') {
-    $field_info_instances = field_info_instances($entity_type, $entity->type );
-    $form_state['required_for_pub']['#fields_instances'][] = $field_info_instances;
-  }
-  
+  $field_info_instances = field_info_instances($entity_type, $entity->type );
+  $form_state['required_for_pub']['#fields_instances'][] = $field_info_instances;
+
   $fields_required_for_pub = array(); 
   
   // important step: this will determine the fields that have been configured to be "required_for_pub" 
@@ -127,24 +122,19 @@ function required_for_pub_field_attach_form($entity_type, $entity, &$form, &$for
     $field_info = field_info_field($field_name);
     if ($field_info['type'] == 'field_collection') {
       // we are on a field collection item so call this function to handle it
-      required_for_pub_fc_special_handler_form_alter($form, $form_state, $field_name); 
+      required_for_pub_fc_special_handler_form_alter($form, $form_state, $field_name);
     }
     if (empty($field_info_instances[$field_name]['required_for_pub'])) { // value can be 0 or NULL  
       continue;
     }
-    if ( $field_info_instances[$field_name]['required_for_pub'] == 'required_for_pub' ) {  // create an array of fields where required_for_pub is  TRUE // TODO: no need for an if . already checked by isset 4 lines above
-      $fields_required_for_pub[] = $field_name;   
-      $form_state['required_for_pub']['#fields'][] = $field_name;
-      // add css to the div wrapping the field
-      $form[$field_name]['#attributes']['class'][] = 'required-for-pub'; 
-
-    }
-    
+    $fields_required_for_pub[] = $field_name;
+    $form_state['required_for_pub']['#fields'][] = $field_name;
+    // add css to the div wrapping the field
+    $form[$field_name]['#attributes']['class'][] = 'required-for-pub';
   }
   
   if (!empty($fields_required_for_pub)) {
-    
-    // gather all the field instances from the top all the way to the nested fields of type "field collection" 
+    // gather all the field instances from the top all the way to the nested fields of type "field collection"
     $fields_instances_temp = NULL;
     foreach ($form_state['required_for_pub']['#fields_instances'] as $key => $field_instance) {
       if (empty($fields_instances_temp)) {
@@ -161,171 +151,166 @@ function required_for_pub_field_attach_form($entity_type, $entity, &$form, &$for
   if ($entity_type == 'node' && !module_exists('save_draft') && !empty($fields_required_for_pub)) {
     $form['actions']['required_for_pub_save_as_draft'] = array(
       '#type' => 'submit',
-      '#access' => true,
+      '#access' => TRUE,
       '#default_value' => 'Save as draft',
       '#name' => 'required_for_pub_save_as_draft',
       '#weight' => 4,
-      '#submit' => 
-      array (
+      '#submit' => array(
         0 => 'node_form_submit',
       ),
     );
-    $form['actions']['submit']['#value'] = 'Publish'; 
+    $form['actions']['submit']['#value'] = t('Publish');
     
     $form['actions']['submit']['#name'] = 'drupal_core_save';
-    //$form['options']['status']['#access'] = FALSE;
   }
 }
 
-
 /**
- * Custom validation for the entity add or edit forms
+ * Custom validation for the node add or edit forms
  */
 function required_for_pub_form_validate($form, &$form_state) {
-  drupal_add_css(drupal_get_path('module', 'required_for_pub') . '/css/required_for_pub.css', array('group' => CSS_DEFAULT, 'every_page' => TRUE));
+  drupal_add_css(drupal_get_path('module', 'required_for_pub') . '/css/required_for_pub.css', array('group' => CSS_DEFAULT));
 
   $trigger = $form_state['triggering_element']['#name'];
-  switch ($trigger) { 
+  switch ($trigger) {
     case 'required_for_pub_save_as_draft':
       $form_state['values']['status'] = 0;
-      return TRUE;
-      break;  
+      break;
     case 'drupal_core_save':
       $form_state['values']['status'] = 1;
-      break;      
+      break;
   }
-      
+
   // if there are no fields that have been configured as required for publish
   if (empty($form_state['required_for_pub']['#fields'])) {
     return TRUE;
   }
 
-  $status = $form_state['values']['status'];
-  $lang = $form_state['values']['language'];  
+  $lang = $form_state['values']['language'];
   $empty_fields = array();
   
-  foreach ($form_state['required_for_pub']['#fields'] as $key => $field_name) {
-    if (empty($form_state['values'][$field_name][$lang][0])) {
-      $item = $form_state['values'][$field_name][$lang];  // some fields do not use any delta or the 0 offset. example: term reference does not use the 0 offset when the field is empty
-    }
-    else { 
-      $item =  $form_state['values'][$field_name][$lang][0];
-    }  
-    // get the field info. Do not use field_get_fields -- it will harder to traverse the array for those fields nested in field collection
-    $field = field_info_field($field_name);
-
-    // get the module that defined the hook_field_is_empty
-    $module = $field['module'];
-    
-    // get the field type
-    $field_type = $field['type'];
-    
-    // get the function name which is in this format: called module_field_is_empty(), where module is the module that defined the field
-    $func = $module.'_field_is_empty';
-    
-    // special handling for booleans
-    // NOTE: the list.module's hook_field_is_empty specifies this: 
-    // if (empty($item['value']) && (string) $item['value'] !== '0') { return TRUE; }
-    // paramter $item passed is array('value' => 0) -- if user has not clicked the wdiget form
-    // which means that the boolean field will always return hook_field_is_empty to be FALSE -- that is, the field contains data. when in fact, it should be treated as EMPTY.
-    // hence, we convert the value from 0 to NULL or set $item to NULL
-    if ($field_type == 'list_boolean') {
-      if ($item['value'] == 0) {
-        $item = NULL;
+  if (!empty($form_state['required_for_pub'])) {
+    foreach ($form_state['required_for_pub']['#fields'] as $field_name) {
+      if (_required_for_pub_field_is_empty($form_state['values'], $field_name, $lang)) {
+        $empty_fields[] = $field_name;
       }
     }
-    
-    // special handling for fields that do no use delta or the 0 offset.
-    if (empty($item)) {
-      $field_is_empty = TRUE;
-    }
-    else { 
-      $field_is_empty = call_user_func($func, $item, $field);
-    }
-    
-    // TO CHECK if field is empty -- this will account for all field types
-    if ($field_is_empty) {
-      $empty_fields[] = $field_name;
+  }
+  if (!empty($form_state['required_for_pub_fc'])) {
+    foreach ($form_state['required_for_pub_fc']['#fields'] as $fc_name => $fc_fields) {
+      // Field collection languages are often (always?) stored as 'und'.
+      $fc_lang = isset($form_state['values'][$fc_name][$lang]) ? $lang : 'und';
+      foreach (array_keys($form_state['values'][$fc_name][$fc_lang]) as $delta) {
+        if (is_numeric($delta)) {
+          foreach ($fc_fields as $field_name) {
+            if (_required_for_pub_field_is_empty($form_state['values'][$fc_name][$fc_lang][$delta], $field_name, $fc_lang)) {
+              $empty_fields[] = $field_name;
+            }
+          }
+        }
+      }
     }
   }
-  
-  // the most important validation
-  $field_string = "";
-  $digit = 1;
-  if ($status == 1 && !empty($empty_fields) ) {
-    // the form is cached. Hence, the css file must be loaded again in the validate function  or  the css wonk work.
-    drupal_add_css(drupal_get_path('module', 'required_for_pub') . '/css/required_for_pub.css', array('group' => CSS_DEFAULT, 'every_page' => TRUE));
-    if (module_exists('save_draft')) {
-      form_set_error('required_for_pub', t('You must do "a" or "b": <p>a. Save this content as DRAFT</p> <p>b. Or PULBISH it but FILL UP "required fields for content to be published" listed below:</p>'));       
-    }
-    else {
-    
-      form_set_error('required_for_pub', t('You must do "a" or "b": <p>a. Save this content as DRAFT.</p> <p>b. Or PUBLISH it but FILL UP the "required fields for content to be published" listed below:</p>'));       
-    }
 
+  // the most important validation
+  if ($form_state['values']['status'] == 1 && !empty($empty_fields) ) {
+    // the form is cached. Hence, the css file must be loaded again in the validate function or the css won't work.
+    drupal_add_css(drupal_get_path('module', 'required_for_pub') . '/css/required_for_pub.css', array('group' => CSS_DEFAULT, 'every_page' => TRUE));
     foreach ($empty_fields as $key => $field_name) {
-      $field_string = $field_name;
-      
       $label = $form_state['required_for_pub']['#fields_instances'][$field_name]['label'];
-      form_set_error($field_name, t('%digit. %field_name', array('%field_name' => $label, '%digit' => $digit)));
-      $digit = $digit + 1;
+      form_set_error($field_name, t('%field_name is required to publish.', array('%field_name' => $label)));
     }
-    
     return FALSE;
-    
   }
   else {
     return TRUE;
   }
-  return FALSE;
 }
 
+/**
+ * Check if a field is empty.
+ * @param $form_state - The current form_state in which to check field presence.
+ * @param $field_name - The machine name of the field to check for.
+ * @param $lang - The language to check in.
+ * @return bool - TRUE is the field is empty.
+ */
+function _required_for_pub_field_is_empty($form_state_values, $field_name, $lang) {
+  // Some fields do not use any delta or the 0 offset. Example: term
+  // reference does not use the 0 offset when the field is empty.
 
+  if (!isset($form_state_values[$field_name])) {
+    return TRUE;
+  }
+  elseif (!isset($form_state_values[$field_name][$lang])) {
+    // certain fields like numbers aren't translated.
+    $item = $form_state_values[$field_name]['und'][0];
+  }
+  elseif (!isset($form_state_values[$field_name][$lang][0])) {
+    $item = $form_state_values[$field_name][$lang];
+  }
+  else {
+    $item =  $form_state_values[$field_name][$lang][0];
+  }
+  $field = field_info_field($field_name);
+  $module = $field['module'];
+  $field_type = $field['type'];
+  $func = $module . '_field_is_empty';
+
+  // special handling for booleans
+  if ($field_type == 'list_boolean') {
+    if ($item['value'] == 0) {
+      $item = NULL;
+    }
+  }
+
+  // special handling for fields that do no use delta or the 0 offset.
+  if (empty($item)) {
+    $field_is_empty = TRUE;
+  }
+  else {
+    $field_is_empty = call_user_func($func, $item, $field);
+  }
+  return $field_is_empty;
+}
 
 /**
- * special handler for fields of type "field collection"
- * For now: support is only for field collection fields up tp 1 level deep.
- * TODO: support for unlimited nesting of fields of type "field collection"
+ * Special handler for fields of type "field collection."
+ * For now: support is only for field collection fields up to 1 level deep.
+ * TODO: support for unlimited nesting of fields of type "field collection."
  */
 function required_for_pub_fc_special_handler_form_alter(&$form, &$form_state, $field_name_fc = NULL, $field_tree = NULL) {
   $form['#rebuild'] = TRUE;
   $lang = $form[$field_name_fc]['#language'];
   $items = $form[$field_name_fc][$lang];
   
-      $fields_fc = field_info_instances('field_collection_item', $field_name_fc);
-      
-      $form_state['required_for_pub']['#fields_instances'][] = $fields_fc;
-      $fields_configured_as_req_for_pub = array();
-      foreach ($fields_fc as $field_name2 => $field_arr) {
+  $fields_fc = field_info_instances('field_collection_item', $field_name_fc);
+  $form_state['required_for_pub']['#fields_instances'][] = $fields_fc;
+  $fields_configured_as_req_for_pub = array();
+  foreach ($fields_fc as $field_name2 => $field_arr) {
+    if (isset($field_arr['required_for_pub']) && $field_arr['required_for_pub'] == 'required_for_pub') {
+      $fields_required_for_pub[] = $field_name2;
+      $form_state['required_for_pub_fc']['#fields'][$field_name_fc][] = $field_name2;
+      $fields_configured_as_req_for_pub[$field_name2] = $field_name2;
+    }
+  }
 
-        if ($field_arr['required_for_pub'] == 'required_for_pub') {
-          $fields_required_for_pub[] = $field_name2;
-          
-          $form_state['required_for_pub']['#fields'][] = $field_name2;
-          $fields_configured_as_req_for_pub[$field_name2] = $field_name2;
-        }
-      }  
-  
   $elements = element_children($items);
   foreach ($elements as $key => $item) {
-    
-    foreach(element_children($items[$key]) as $key2 => $field_name_fc2) {
-      // if the field is not configured to be "required for pub", ignore
-      if (!array_key_exists($field_name_fc2, $fields_configured_as_req_for_pub)) {
-        continue;
+    if (isset($items[$key]) && is_array($items[$key])) {
+      foreach (element_children($items[$key]) as $key2 => $field_name_fc2) {
+        // if the field is not configured to be "required for pub", ignore
+        if (!array_key_exists($field_name_fc2, $fields_configured_as_req_for_pub)) {
+          continue;
+        }
+        if (empty($items[$key][$field_name_fc2][$lang][0])) {
+          $form[$field_name_fc][$lang][$key][$field_name_fc2][$lang]['#title'] .= '<div><span class="required-for-pub">*</span></div>';
+          $form[$field_name_fc][$lang][$key][$field_name_fc2][$lang]['#attributes']['class'][] = 'required-for-pub';
+        }
+        else {
+          $form[$field_name_fc][$lang][$key][$field_name_fc2][$lang][0]['value']['#title'] .= '<div><span class="required-for-pub">*</span></div>';
+          $form[$field_name_fc][$lang][$key][$field_name_fc2][$lang][0]['value']['#attributes']['class'][] = 'required-for-pub';
+        }
       }
-
-      $form_element = $items[$key][$field_name_fc2][$lang][0];
-
-      $title = $form_element['#title'];
-      
-      if (empty($items[$key][$field_name_fc2][$lang][0]['value']) ) {
-        $form[$field_name_fc][$lang][$key][$field_name_fc2][$lang][0]['#title'] = $title.'<div><span class="required-for-pub">*Required for content to be published.</span></div>';
-      }
-      else {
-        $form[$field_name_fc][$lang][$key][$field_name_fc2][$lang][0]['value']['#title'] = $title.'<div><span class="required-for-pub">*Required for content to be published.</span></div>';
-      }
-      $form[$field_name_fc][$lang][$key][$field_name_fc2][$lang][0]['value']['#attributes']['class'][] = 'required-for-pub'; 
     }
   }
 }

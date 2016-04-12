@@ -4,8 +4,8 @@
  * @file
  * Installs the required_for_pub module.
  *
- * Creates a database for use of multi-layered default formats and sets
- * default settings.
+ * Sets the weight of the require_for_pub module to 1 in the system module list so that
+ * other modules will execute first by default.
  */
 
 /**
